@@ -5,4 +5,5 @@ package timestream2;
 message ImageMsg {
   required string datetime = 1; 
   required bytes imgbytes = 2;
+  required uint32 crc32 = 3;
 }
