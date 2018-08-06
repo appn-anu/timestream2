@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package timestream2;
+
+message ImageMsg {
+  required string datetime = 1; 
+  required bytes imgbytes = 2;
+}

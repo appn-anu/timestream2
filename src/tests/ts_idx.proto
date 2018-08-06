@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package timestream2;
+
+message TSOffsetMsg {
+  required string datetime = 1; 
+  required uint64 offset = 2;
+  required uint64 size = 3;
+}
+
+message TSIndexMsg {
+  repeated TSOffsetMsg offsets = 1;
+}
