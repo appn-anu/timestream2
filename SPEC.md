@@ -8,13 +8,17 @@
 
 ## General
 
-* SHALL be statically compiled, or able to be statically compiled for x86_64 architecture at least
+* SHALL be statically compilable for x86_64 architecture at least
 * SHOULD be reasonably performant on x86_64 architecture
 * SHOULD be architected to reduce disk io
 * SHALL NOT have hardcoded any specific file paths or file path fragments
 * SHALL NOT depend on any 3rd party compiled program or require installation of any 3rd party library or toolchain
 
+## Timestream2 format
 
+* SHALL be encoded using a cross-language, cross-platform binary representation of images and their metadata.
+* SHALL be archivable as a single-file dump of a timestream
+* SHALL allow stream processing (i.e. allow 
 
 ## Module system
 
@@ -71,7 +75,7 @@ outputs:
 
 - SHALL load image data from disk and infer metadata (such as the time) from the filename or the exif data
 - SHALL recurse into directories
-- SHOULD NOT error if a corrupt image is encountered
+- SHOULD NOT error if a corrupt image is encountered, and SHALL NOT pass corrupt images to subsequent tools
 - SHOULD parse the timestamp from the filename regardless of the timestamps location within the filename
 
 inputs:
@@ -84,6 +88,7 @@ configuration:
 - (OPTIONAL) file timestamp format, defaults to the *TIMESTREAM DATETIME PATTERN* 
 - (OPTIONAL) flag to use exif to get the timestamp
 - (OPTIONAL) interval parameter on how long to truncate the timestamp, defaults to 0s or no truncation
+- (OPTIONAL) remove images from disk after encoding (i.e. "mv" to ts2 formatted stream on stdout).
 
 outputs:
 
