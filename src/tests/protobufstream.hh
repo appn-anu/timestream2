@@ -86,11 +86,12 @@ public:
     {
         uint64_t size = 0;
         if (!_coded_in->ReadVarint64((::google::protobuf::uint64*) &size)) {
-            if (_real_stream->eof()) return false;
-            throw std::runtime_error("Got size < 0 in protobuf message decoding");
+            if (_real_stream->eof())
+                return false;
+            else
+                throw std::runtime_error("Got size < 0 in protobuf message decoding");
         }
         if (!_coded_in->ReadString(&_buffer, size)) {
-            if (_real_stream->eof()) return false;
             throw std::runtime_error("Failed to read messsage string in protobuf message decoding");
         }
         message.ParseFromString(_buffer);
