@@ -74,7 +74,7 @@ class TSv1Stream(object):
 
 
     def _timestream_path(self, image):
-        path = "{base}/%Y/%Y_%m/%Y_%m_d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_00.{ext}"
+        path = "{base}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_00.{ext}"
         path = image.datetime.strftime(path)
         path = path.format(base=self.path, name=self.name, ext=self.format)
         return path
