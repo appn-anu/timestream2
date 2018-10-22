@@ -3,18 +3,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#const (
-#	// ArchiveForm is the form that tar files should take (YYYY-MM-DD)
-#	ArchiveForm = "%s~2006-01-02.tar"
-#	// DefaultTsDirectoryStructure is the default directory structure for timestreams
-#	DefaultTsDirectoryStructure = "2006/2006_01/2006_01_02/2006_01_02_15/"
-#	// TsForm is the timestamp form for individual files.
-#	TsForm         = "2006_01_02_15_04_05"
-#	dumbExifForm   = "2006:01:02 15:04:05"
-#	tsRegexPattern = "[0-9][0-9][0-9][0-9]_[0-1][0-9]_[0-3][0-9]_[0-2][0-9]_[0-5][0-9]_[0-5][0-9]"
-#)
-#
-
 import datetime as dt
 import io
 import os
