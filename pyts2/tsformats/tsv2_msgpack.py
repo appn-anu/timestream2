@@ -13,16 +13,16 @@ import msgpack
 class TSv2Stream(object):
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S" # FIXME: time zones
 
-    def __init__(self, file=None, mode="r"):
+    def __init__(self, path=None, mode="r"):
         self.fh = None
-        if file is not None:
-            self.open(file, mode)
+        if path is not None:
+            self.open(path, mode)
 
-    def open(self, file, mode="r"):
+    def open(self, path, mode="r"):
         if mode not in ("r", "w"):
             raise ValueError("Invalid mode " + mode)
-        if isinstance(file, str):
-            file = open(file, mode + "b")
+        if isinstance(path, str):
+            file = open(path, mode + "b")
         self.fh = file
         if 'r' in mode:
             self.unpacker = msgpack.Unpacker(self.fh)

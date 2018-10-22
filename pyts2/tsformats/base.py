@@ -102,3 +102,7 @@ class TSImage(object):
     def isodate(self):
         """convenience helper to get iso8601 string"""
         return self.datetime.strftime("%Y-%m-%dT%H:%M:%S")
+
+    def save(self, output):
+        imageio.imwrite(output, self.image)
+
