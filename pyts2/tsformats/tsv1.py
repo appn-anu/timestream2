@@ -9,7 +9,7 @@ import os
 import os.path as op
 
 
-TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d\d).(png|jpg|jpeg|cr2|tif|tiff)", re.I)
+TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d\d)?.(png|jpg|jpeg|cr2|tif|tiff)$", re.I)
 
 
 def path_is_timestream_image(path):
@@ -29,34 +29,39 @@ def path_is_timestream_image(path):
     False
     """
     filename = op.basename(path)
-    m = TS_IMAGE_FILE_RE.match(filename)
+    m = TS_IMAGE_FILE_RE.search(filename)
     return m is not None
 
 
-def find_timestream_images(rootdir):
+def find_timestream_images(rootdir, format=None):
     """Finds and yields all valid timestream image paths below rootdir"""
     for root, dirs, files in os.walk(rootdir):
         for file in files:
+            if format is not None and not file.endswith(format):
+                print("skipping", file)
+                continue
             if path_is_timestream_image(file):
                 yield op.join(root, file)
 
 
 class TSv1Stream(object):
 
-    def __init__(self, path=None, mode="r", format="tif"):
+    def __init__(self, path=None, mode="r", format=None):
         """path is the base directory of a timestream"""
         self.files = None
         self.name = None
         self.format = None
         if path is not None:
-            self.open(path, mode)
+            self.open(path, mode, format=format)
 
-    def open(self, path, mode="r", format="tif"):
+    def open(self, path, mode="r", format=None):
         self.name = op.basename(path)
-        self.format = format.lstrip(".")
+        if format is not None:
+            format = format.lstrip(".")
+        self.format = format
         self.path = path
         if mode == "r":
-            self.files = find_timestream_images(path)
+            self.files = find_timestream_images(path, format=format)
         else:
             self.files = []
 

@@ -52,7 +52,7 @@ class TSv2Stream(object):
         if not isinstance(image, TSImage):
             raise TypeError("image should be a TSImage")
         date_enc = image.datetime.strftime(self.DATE_FORMAT).encode("ascii")
-        image_enc = image.as_tiff()
+        image_enc = image.as_bytes()
         msgdict = {b"datetime": date_enc,
                    b"image": image_enc}
         #print(msgdict)

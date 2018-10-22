@@ -15,7 +15,7 @@ import numpy as np
 
 
 TS_IMAGE_DATEFMT = "%Y_%m_%d_%H_%M_%S"
-TS_IMAGE_DATETIME_RE = re.compile(r"^\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d")
+TS_IMAGE_DATETIME_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d")
 
 
 class ImageIOError(Exception):
@@ -43,7 +43,7 @@ def jgmtf_date(datestr):
 
 def ts_image_path_get_date(path):
     fn = op.basename(path)
-    m = TS_IMAGE_DATETIME_RE.match(fn)
+    m = TS_IMAGE_DATETIME_RE.search(fn)
     if m is None:
         raise ValueError("path '" + path + "' doesn't contain a timestream date")
     return jgmtf_date(m[0])
@@ -54,6 +54,13 @@ class TSImage(object):
 
     Essentially only two fields: datetime and image. Image will always be a
     numpy array. datetime will always be datetime.datetime.
+
+
+    TODO:
+        - CR2 IO: read to NxMx4 (RGBR) TIFF, 16bit
+        - image "names", i.e. the stuff before the underscored dates. Should be
+          handeled like datetimes, i.e. parsed from image path, or manually set
+          for images given from bytes or numpy arrays.
     """
 
     def __init__(self, path=None, image=None, datetime=None):
@@ -96,8 +103,8 @@ class TSImage(object):
         self.image = image
         self.datetime = datetime
 
-    def as_tiff(self):
-        return imageio.imwrite('<bytes>', self.image, format="TIFF")
+    def as_bytes(self, format="TIFF"):
+        return imageio.imwrite('<bytes>', self.image, format=format)
 
     def isodate(self):
         """convenience helper to get iso8601 string"""
@@ -105,4 +112,3 @@ class TSImage(object):
 
     def save(self, output):
         imageio.imwrite(output, self.image)
-
