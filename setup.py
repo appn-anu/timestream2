@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 from setuptools import setup, find_packages
 from glob import glob
-#import versioneer
+import versioneer
 
-
-#versioneer.VCS = 'git'
-#versioneer.versionfile_source = 'timestream/_version.py'
-#versioneer.versionfile_build = 'timestream/_version.py'
-#versioneer.tag_prefix = ''
-#versioneer.parentdir_prefix = 'timestreamlib-'
 
 desc = """
 pyts2: Next-generation utilities and a python library for manipulating
@@ -26,15 +20,15 @@ test_requires = [
 setup(
     name="pyts2",
     packages=find_packages(),
-    #version=versioneer.get_version(),
-    #cmdclass=versioneer.get_cmdclass(),
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     install_requires=install_requires,
     tests_require=test_requires,
     #scripts=scripts,
     description=desc,
     author="Kevin Murray",
     author_email="spam@kdmurray.id.au",
-    url="https://github.com/borevitzlab/timestreamlib",
+    url="https://github.com/appf-anu/timestream2",
     keywords=["timestream", "timelapse", "photography", "video"],
     classifiers=[
         "Programming Language :: Python",
