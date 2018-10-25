@@ -12,6 +12,7 @@ import re
 import imageio
 import iso8601
 import numpy as np
+import rawpy
 
 
 TS_IMAGE_DATEFMT = "%Y_%m_%d_%H_%M_%S"
@@ -49,6 +50,28 @@ def ts_image_path_get_date(path):
     return jgmtf_date(m[0])
 
 
+def ts_imread(image):
+    try:
+        # str means a path
+        if isinstance(image, str):
+            base, ext = op.splitext(image)
+            if ext.lower() in ("cr2", "nef"):
+                with rawpy.imread(image) as img:
+                    return img.raw_image.copy()
+            else:
+                return imageio.imread(path)
+        # bytes is assumed to be either jpeg/tiff/png as bytes.
+        elif isinstance(image, bytes):
+            return imageio.imread(image)
+        # either it's a file object, or some other funky thing. In either case,
+        # throw it at imageio and hope for the best
+        else:
+            return imageio.imread(image)
+    except Exception as err:
+        raise ImageIOError("Failed to read image:\n") from err
+
+
+
 class TSImage(object):
     """Image class for all timestreams
 
@@ -79,6 +102,8 @@ class TSImage(object):
         if not isinstance(image, np.ndarray):
             raise TypeError("image should be an NxMx3 numpy array, uint8 or uint16")
 
+        if isinstance(datetime, str):
+            datetime = jgmtf_date(datetime)
         if not isinstance(datetime, dt.datetime):
             raise TypeError("datetime should be datetime.datetime")
         self.datetime = datetime
@@ -87,16 +112,14 @@ class TSImage(object):
 
     def read_from(self, filelike, datetime=None):
         # handle image
-        try:
-            image = imageio.imread(filelike)
-        except Exception as e:
-            raise ImageIOError("Failed to read image: " + str(e))
+        image = ts_imread(filelike)
 
         # handle datetime
         if isinstance(datetime, str):
             datetime = jgmtf_date(datetime)
         if datetime is None:
             datetime = ts_image_path_get_date(filelike)
+
         if not isinstance(datetime, dt.datetime):
             raise ValueError("Don't know what to do with your datetime")
 
@@ -112,3 +135,9 @@ class TSImage(object):
 
     def save(self, output):
         imageio.imwrite(output, self.image)
+
+    @classmethod
+    def _fakeimg(cls):
+        """Generates a fake image for testing etc."""
+        return cls(datetime="2018-10-11T01:02:03",
+                   image=np.array([[[0, 1, 2], [3, 4, 5]]], dtype='u1'))

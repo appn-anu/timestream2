@@ -2,3 +2,4 @@ imageio
 msgpack
 numpy
 iso8601
+rawpy

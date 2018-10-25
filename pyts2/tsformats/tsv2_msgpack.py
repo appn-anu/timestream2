@@ -29,12 +29,10 @@ class TSv2Stream(object):
         if 'w' in mode:
             self.packer = msgpack.Packer()
 
-
     def close(self):
         self.packer = None
         self.unpacker = None
         self.fh.close()
-
 
     def read(self):
         if self.fh is None or self.fh.closed:
@@ -44,7 +42,6 @@ class TSv2Stream(object):
         datestr = msgdict[b"datetime"].decode('ascii')
         imgbytes = msgdict[b"image"]
         return TSImage(image=imgbytes, datetime=datestr)
-
 
     def write(self, image):
         if self.fh is None or self.fh.closed:
