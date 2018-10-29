@@ -44,7 +44,6 @@ def find_timestream_images(rootdir, format=None):
     for root, dirs, files in os.walk(rootdir):
         for file in files:
             if format is not None and not file.endswith(format):
-                print("skipping", file)
                 continue
             if path_is_timestream_image(file):
                 yield op.join(root, file)
@@ -52,11 +51,13 @@ def find_timestream_images(rootdir, format=None):
 
 class TSv1Stream(object):
 
-    def __init__(self, path=None, mode="r", format=None, onerror="warn"):
+    def __init__(self, path=None, mode="r", format=None, onerror="warn",
+                 raw_process_params=None):
         """path is the base directory of a timestream"""
         self.files = None
         self.name = None
         self.format = None
+        self.rawparams = raw_process_params
         if onerror == "raise" or onerror == "skip" or onerror == "warn":
             self.onerror = onerror
         else:
@@ -80,17 +81,14 @@ class TSv1Stream(object):
     def read(self):
         if self.files is None:
             raise RuntimeError("TSv1Stream not opened")
-        path = next(self.files)
-        try:
-            return TSImage(path=path)
-        except ImageIOError as exc:
-            if self.onerror == "raise":
-                raise exc
-            elif self.onerror == "warn":
-                warnings.warn(str(exc))
-                return self.read()
-            else:
-                return self.read()
+        for path in self.files:
+            try:
+                return TSImage(path=path, raw_process_params=self.rawparams)
+            except ImageIOError as exc:
+                if self.onerror == "raise":
+                    raise exc
+                elif self.onerror == "warn":
+                    warnings.warn(str(exc))
 
 
     def _timestream_path(self, image):
@@ -117,7 +115,7 @@ class TSv1Stream(object):
     def __next__(self):
         res = self.read()
         if res is None:
-            raise StopIteraton
+            raise StopIteration
         return res
 
     def close(self):

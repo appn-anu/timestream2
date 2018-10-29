@@ -55,6 +55,19 @@ class TSv2Stream(object):
         #print(msgdict)
         self.fh.write(self.packer.pack(msgdict))
 
+    def write_verbaitm(self, bytesorpath, datetime):
+        if self.fh is None or self.fh.closed:
+            raise RuntimeError("TSv2Stream not opened")
+        if isinstance(datetime, str):
+            datetime = jgmtf_date(datetime)
+        if not isinstance(bytesorpath, bytes):
+            with open(bytesorpath, "rb") as fh:
+                bytesorpath = fh.read()
+        date_enc = datetime.strftime(self.DATE_FORMAT).encode("ascii")
+        msgdict = {b"datetime": date_enc,
+                   b"image": bytesorpath}
+        self.fh.write(self.packer.pack(msgdict))
+
     def __iter__(self):
         return self
 

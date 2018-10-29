@@ -50,16 +50,19 @@ def ts_image_path_get_date(path):
     return jgmtf_date(m[0])
 
 
-def ts_imread(image):
+def ts_imread(image, raw_process_params=None):
     try:
         # str means a path
         if isinstance(image, str):
             base, ext = op.splitext(image)
-            if ext.lower() in ("cr2", "nef"):
+            if ext.lower() in (".cr2", ".nef"):
                 with rawpy.imread(image) as img:
-                    return img.raw_image.copy()
+                    if raw_process_params is None:
+                        return img.raw_image.copy()
+                    else:
+                        return img.postprocess(params=raw_process_params).copy()
             else:
-                return imageio.imread(path)
+                return imageio.imread(image)
         # bytes is assumed to be either jpeg/tiff/png as bytes.
         elif isinstance(image, bytes):
             return imageio.imread(image)
@@ -68,7 +71,7 @@ def ts_imread(image):
         else:
             return imageio.imread(image)
     except Exception as err:
-        raise ImageIOError("Failed to read image:\n") from err
+        raise ImageIOError("Failed to read image:\n" + str(err)) from err
 
 
 
@@ -86,10 +89,11 @@ class TSImage(object):
           for images given from bytes or numpy arrays.
     """
 
-    def __init__(self, path=None, image=None, datetime=None):
+    def __init__(self, path=None, image=None, datetime=None, raw_process_params=None):
         if path is None and image is None:
             raise ValueError("One of path or image must be given")
 
+        self.rawparams = raw_process_params
         if isinstance(image, bytes):
             # you can give raw bytes to imageio.imread, so do so
             return self.read_from(image, datetime)
@@ -112,7 +116,7 @@ class TSImage(object):
 
     def read_from(self, filelike, datetime=None):
         # handle image
-        image = ts_imread(filelike)
+        image = ts_imread(filelike, raw_process_params=self.rawparams)
 
         # handle datetime
         if isinstance(datetime, str):
