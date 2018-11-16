@@ -24,6 +24,7 @@ class ImageIOError(Exception):
 
 
 def jgmtf_date(datestr):
+    """Just give me the fucking date!"""
     # first, try iso8601 of some form
     try:
         return iso8601.parse_date(datestr)
@@ -43,6 +44,7 @@ def jgmtf_date(datestr):
 
 
 def ts_image_path_get_date(path):
+    #TODO: make it also extract the number after seconds
     fn = op.basename(path)
     m = TS_IMAGE_DATETIME_RE.search(fn)
     if m is None:
@@ -51,6 +53,7 @@ def ts_image_path_get_date(path):
 
 
 def ts_imread(image, raw_process_params=None):
+    """Utility function which reads an image from open()/bytes/path"""
     try:
         # str means a path
         if isinstance(image, str):
