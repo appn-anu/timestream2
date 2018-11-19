@@ -27,15 +27,15 @@ class TSPipeline(object):
             image = step.process_image(image)
         return image
 
-    def process_from(self, input, ncpus=1):
+    def process_from(self, input_stream, ncpus=1):
         if ncpus > 1:
-            # FIXME: support parallel processing by setting up a pool and
-            # replacing map with pool.imap
-            map = map
-        yield from map(self.process_one, input)
+            from multiprocessing import Pool
+            pool = Pool(ncpus)
+            map = pool.imap
+        yield from map(self.process_one, input_stream)
 
-    def process_to(self, input, output, ncpus=1):
-        for done in self.process_all_iter(input, ncpus=ncpus):
+    def process_to(self, input_stream, output, ncpus=1):
+        for done in self.process_from(input_stream, ncpus=ncpus):
             output.write(done)
 
     def write(self, image):
