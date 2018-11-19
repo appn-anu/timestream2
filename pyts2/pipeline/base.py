@@ -35,7 +35,7 @@ class TSPipeline(object):
         yield from map(self.process_one, input_data)
 
     def process_to(self, input_data, output, ncpus=1):
-        for done in self.process_all_iter(input_data, ncpus=ncpus):
+        for done in self.process_from(input_data, ncpus=ncpus):
             output.write(done)
 
     def write(self, image):
