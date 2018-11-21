@@ -6,92 +6,51 @@
 from pyts2.tsformats.base import *
 from pyts2.utils import *
 
-import re
+import datetime as dt
+import io
 import os
 import os.path as op
-import warnings
+import re
 import tarfile
+import warnings
 
 
-TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d\d)?.(\S+)$", re.I)
+
+TS_IMAGE_DATETIME_RE = re.compile(r"(\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d)(_\d+)?")
+TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d+)?.(\S+)$", re.I)
 
 
-def path_is_timestream_image(path):
+def ts_image_path_get_date_index(path):
+    """Extract date and index from path to timestream image
+
+    :param path: File path, with or without directory
+    """
+
+    fn = op.splitext(op.basename(path))[0]
+    m = TS_IMAGE_DATETIME_RE.search(fn)
+    if m is None:
+        raise ValueError("path '" + path + "' doesn't contain a timestream date")
+    try:
+        index = int(m[2].lstrip("_"))
+    except:
+        index = 0
+    return {"date": parse_date(m[1]), "index": index}
+
+
+
+def path_is_timestream_file(path):
     """Test if pathname pattern matches the expected
 
     :param path: File path, with or without directory
-
-    >>> path_is_timestream_image("2001_02_03_13_14_15_00.png")
-    True
-    >>> path_is_timestream_image("with/a/path/2001_02_03_13_14_15_00.png")
-    True
-    >>> path_is_timestream_image("with/a/path/2001_02_03_13_14_15_00.JPG")
-    True
-    >>> path_is_timestream_image("with/a/path/2001_02_03_13_14_15_00.CR2")
-    True
-    >>> path_is_timestream_image("with/a/path/cameraname_2001_02_03_13_14_15_00.png")
-    True
-    >>> path_is_timestream_image("with/a/path/cameraname_2001_02_03_13_14_15.jpg")
-    True
-    >>> path_is_timestream_image("this_aint_a_tsimage.png")
-    False
     """
-    filename = op.basename(path)
-    m = TS_IMAGE_FILE_RE.search(filename)
-    return m is not None
+    try:
+        ts_image_path_get_date_index(path)
+        return True
+    except ValueError:
+        return False
 
 
-class TarOrDir(object):
-
-    def __init__(self, input):
-        self.input = input
-
-    def walk_paths(self):
-        def _walk_tar(tar):
-            tf = tarfile.TarFile(tar)
-            for entry in tf:
-                if entry.isfile():
-                    yield op.join(tar, entry.name)
-
-
-        if not op.isdir(self.input) and self.input.lower().endswith(".tar"):
-            yield from _walk_tar(self.input)
-
-        for root, dirs, files in os.walk(self.input):
-            for file in files:
-                if file.endswith(".tar"):
-                    yield from _walk_tar(op.join(root, file))
-                else:
-                    yield op.join(root, file)
-
-    def walk_contents(self, predictate=lambda f: True):
-        for file in self.walk_paths():
-            yield (file, self[file])
-
-    def _get_from_tar(self, tar, subitem):
-        tf = tarfile.TarFile(op.join(self.input, tar))
-        return tf.extractfile(subitem).read()
-
-    def __getitem__(self, item):
-        subpaths = item.split("/")
-        for i, subpath in enumerate(subpaths):
-            fullsubpath = op.join(self.input, subpath[:i])
-            remainder = op.join(*subpaths[i:])
-            print(fullsubpath)
-            if op.isdir(fullsubpath):
-                continue
-            elif subpath.endswith(".tar") and op.isfile(fullsubpath):
-                return self._get_from_tar(fullsubpath, remainder)
-            elif op.isfile(fullsubpath + ".tar"):
-                return self._get_from_tar(fullsubpath + ".tar", remainder)
-            elif op.isfile(fullsubpath):
-                with open(fullsubpath, "rb") as fh:
-                    return fh.read()
-        raise KeyError(item)
-
-
-
-def find_timestream_images(rootdir, format=None):
+def find_timestream_files(rootdir, format=None):
     """Finds and yields all valid timestream image paths below rootdir"""
     for root, dirs, files in os.walk(rootdir):
         for file in files:
@@ -99,29 +58,6 @@ def find_timestream_images(rootdir, format=None):
                 continue
             if path_is_timestream_image(file):
                 yield op.join(root, file)
-
-@nowarnings
-def gather_images(tarordir, format="jpg"):
-    if op.isdir(tarordir):
-        files = glob.glob("{base}/*.{ext}".format(base=tarordir, ext=format))
-        for file in files:
-            try:
-                c, d, i, e = filename2dateidx(file)
-                if e == format:
-                    pix = imageio.imread(file)
-                    yield Image(file, c, d, i, e, pix)
-            except Exception as e:
-                print("Skipping", entry.name, ":", str(e), file=stderr)
-    else:
-        tf = tarfile.TarFile(tarordir)
-        for entry in tf:
-            try:
-                c, d, i, e = filename2dateidx(entry.name)
-                if e == format:
-                    pix = imageio.imread(tf.extractfile(entry).read())
-                    yield Image(entry.name, c, d, i, e, pix)
-            except Exception as e:
-                print("Skipping", entry.name, ":", str(e), file=stderr)
 
 
 class TSv1Stream(object):
@@ -148,7 +84,7 @@ class TSv1Stream(object):
         self.path = path
         if mode == "r":
             if files is None:
-                files = find_timestream_images(path, format=format)
+                files = find_timestream_files(path, format=format)
             self.files = files
         else:
             self.files = []
