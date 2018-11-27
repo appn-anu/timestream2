@@ -1,5 +1,5 @@
 from pyts2.test.utils import *
-from pyts2.tsformats.tsv1 import TarOrDir
+from pyts2.tsformats.tarballio import TarOrDir
 
 import itertools
 import os
