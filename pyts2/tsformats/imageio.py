@@ -132,12 +132,14 @@ class TSImage(object):
             raise TypeError("Don't know what to do with your datetime")
 
     def as_bytes(self, format=None):
-        if format is not None:
+        if format is None:
             if isinstance(self._filelike, bytes):
                 return self._filelike
             elif op.isfile(self._filelike):
                 with open(self._filelike, "rb") as fh:
-                    return fh.bytes()
+                    return fh.read()
+            # catch-all if neither of the above is true
+            format = "TIFF"
         return imageio.imwrite('<bytes>', self.pixels, format=format)
 
     def isodate(self):

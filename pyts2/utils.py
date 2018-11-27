@@ -28,7 +28,11 @@ def parse_date(datestr):
 
     # first, try iso8601 of some form
     try:
-        return iso8601.parse_date(datestr)
+        date = iso8601.parse_date(datestr)
+        # Remove timezone since all dates are assumed to be local time
+        # FIXME this is a terrible hack. we need to find a way around this
+        # eventually
+        return date.replace(tzinfo=None)
     except:
         pass
     # Then the usual

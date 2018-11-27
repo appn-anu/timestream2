@@ -4,6 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from pyts2.utils import *
+from .imageio import *
 
 import os.path as op
 import re
