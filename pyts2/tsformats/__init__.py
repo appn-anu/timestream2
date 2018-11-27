@@ -4,7 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-from .base import TSImage
-from .tsv1 import TSv1Stream, find_timestream_images
+from .imageio import TSImage
+from .tsv1 import TSv1Stream
 from .tsv2_msgpack import TSv2Stream
 

@@ -6,6 +6,11 @@
 from pyts2.tsformats.base import *
 from pyts2.utils import *
 
+import os
+import os.path as op
+import tarfile
+
+
 
 class TarOrDir(object):
 

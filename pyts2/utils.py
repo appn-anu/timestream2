@@ -23,6 +23,9 @@ def nowarnings(func):
 
 
 def parse_date(datestr):
+    if isinstance(datestr, dt.datetime):
+        return datestr
+
     # first, try iso8601 of some form
     try:
         return iso8601.parse_date(datestr)

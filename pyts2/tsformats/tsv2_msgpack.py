@@ -59,7 +59,7 @@ class TSv2Stream(object):
         if self.fh is None or self.fh.closed:
             raise RuntimeError("TSv2Stream not opened")
         if isinstance(datetime, str):
-            datetime = jgmtf_date(datetime)
+            datetime = parse_date(datetime)
         if not isinstance(bytesorpath, bytes):
             with open(bytesorpath, "rb") as fh:
                 bytesorpath = fh.read()
