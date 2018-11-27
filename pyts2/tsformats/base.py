@@ -3,148 +3,27 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import datetime as dt
-import io
-import os
+from pyts2.utils import *
+
 import os.path as op
 import re
 
-import imageio
-import iso8601
-import numpy as np
-import rawpy
+TS_IMAGE_DATETIME_RE = re.compile(r"(\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d)(_\d+)?")
+TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d+)?.(\S+)$", re.I)
 
 
-TS_IMAGE_DATEFMT = "%Y_%m_%d_%H_%M_%S"
-TS_IMAGE_DATETIME_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d")
+def ts_image_path_get_date_index(path):
+    """Extract date and index from path to timestream image
 
-
-class ImageIOError(Exception):
-    pass
-
-
-def jgmtf_date(datestr):
-    """Just give me the fucking date!"""
-    # first, try iso8601 of some form
-    try:
-        return iso8601.parse_date(datestr)
-    except:
-        pass
-    # Then the usual
-    try:
-        return dt.datetime.strptime(datestr, TS_IMAGE_DATEFMT)
-    except:
-        pass
-
-    # Add more things here in try-excepts if we want to accept other date
-    # formats
-
-    # Uh-oh, nothing's worked
-    raise ValueError("date string '" + datestr + "' doesn't match valid date formats")
-
-
-def ts_image_path_get_date(path):
-    #TODO: make it also extract the number after seconds
-    fn = op.basename(path)
+    :param path: File path, with or without directory
+    """
+    fn = op.splitext(op.basename(path))[0]
     m = TS_IMAGE_DATETIME_RE.search(fn)
     if m is None:
         raise ValueError("path '" + path + "' doesn't contain a timestream date")
-    return jgmtf_date(m[0])
 
-
-def ts_imread(image, raw_process_params=None):
-    """Utility function which reads an image from open()/bytes/path"""
     try:
-        # str means a path
-        if isinstance(image, str):
-            base, ext = op.splitext(image)
-            if ext.lower() in (".cr2", ".nef"):
-                with rawpy.imread(image) as img:
-                    if raw_process_params is None:
-                        return img.raw_image.copy()
-                    else:
-                        return img.postprocess(params=raw_process_params).copy()
-            else:
-                return imageio.imread(image)
-        # bytes is assumed to be either jpeg/tiff/png as bytes.
-        elif isinstance(image, bytes):
-            return imageio.imread(image)
-        # either it's a file object, or some other funky thing. In either case,
-        # throw it at imageio and hope for the best
-        else:
-            return imageio.imread(image)
-    except Exception as err:
-        raise ImageIOError("Failed to read image:\n" + str(err)) from err
-
-
-
-class TSImage(object):
-    """Image class for all timestreams
-
-    Essentially only two fields: datetime and image. Image will always be a
-    numpy array. datetime will always be datetime.datetime.
-
-
-    TODO:
-        - CR2 IO: read to NxMx4 (RGBR) TIFF, 16bit
-        - image "names", i.e. the stuff before the underscored dates. Should be
-          handeled like datetimes, i.e. parsed from image path, or manually set
-          for images given from bytes or numpy arrays.
-    """
-
-    def __init__(self, path=None, image=None, datetime=None, raw_process_params=None):
-        if path is None and image is None:
-            raise ValueError("One of path or image must be given")
-
-        self.rawparams = raw_process_params
-        if isinstance(image, bytes):
-            # you can give raw bytes to imageio.imread, so do so
-            return self.read_from(image, datetime)
-
-        if path is not None:
-            return self.read_from(path, datetime)
-        elif datetime is None:
-            raise ValueError("Datetime must be given if image is given")
-
-        if not isinstance(image, np.ndarray):
-            raise TypeError("image should be an NxMx3 numpy array, uint8 or uint16")
-
-        if isinstance(datetime, str):
-            datetime = jgmtf_date(datetime)
-        if not isinstance(datetime, dt.datetime):
-            raise TypeError("datetime should be datetime.datetime")
-        self.datetime = datetime
-        self.image = image
-
-
-    def read_from(self, filelike, datetime=None):
-        # handle image
-        image = ts_imread(filelike, raw_process_params=self.rawparams)
-
-        # handle datetime
-        if isinstance(datetime, str):
-            datetime = jgmtf_date(datetime)
-        if datetime is None:
-            datetime = ts_image_path_get_date(filelike)
-
-        if not isinstance(datetime, dt.datetime):
-            raise ValueError("Don't know what to do with your datetime")
-
-        self.image = image
-        self.datetime = datetime
-
-    def as_bytes(self, format="TIFF"):
-        return imageio.imwrite('<bytes>', self.image, format=format)
-
-    def isodate(self):
-        """convenience helper to get iso8601 string"""
-        return self.datetime.strftime("%Y-%m-%dT%H:%M:%S")
-
-    def save(self, output):
-        imageio.imwrite(output, self.image)
-
-    @classmethod
-    def _fakeimg(cls):
-        """Generates a fake image for testing etc."""
-        return cls(datetime="2018-10-11T01:02:03",
-                   image=np.array([[[0, 1, 2], [3, 4, 5]]], dtype='u1'))
+        index = int(m[2].lstrip("_"))
+    except:
+        index = 0
+    return {"datetime": parse_date(m[1]), "index": index}

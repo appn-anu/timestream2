@@ -4,63 +4,55 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from pyts2.tsformats.base import *
+from pyts2.tsformats.imageio import *
 from pyts2.utils import *
 
-import re
+import datetime as dt
+import io
 import os
 import os.path as op
-import warnings
+import re
 import tarfile
+import warnings
 
 
-TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d\d)?.(\S+)$", re.I)
 
-
-def path_is_timestream_image(path):
+def path_is_timestream_file(path, extensions=None):
     """Test if pathname pattern matches the expected
 
     :param path: File path, with or without directory
+    :param path: Optionally, one or more extensions to accept
 
-    >>> path_is_timestream_image("2001_02_03_13_14_15_00.png")
+    >>> path_is_timestream_file("test_2018_12_31_23_59_59_00.jpg")
     True
-    >>> path_is_timestream_image("with/a/path/2001_02_03_13_14_15_00.png")
+    >>> path_is_timestream_file("test_2018_12_31_23_59_59_00.jpg", extensions="jpg")
     True
-    >>> path_is_timestream_image("with/a/path/2001_02_03_13_14_15_00.JPG")
-    True
-    >>> path_is_timestream_image("with/a/path/2001_02_03_13_14_15_00.CR2")
-    True
-    >>> path_is_timestream_image("with/a/path/cameraname_2001_02_03_13_14_15_00.png")
-    True
-    >>> path_is_timestream_image("with/a/path/cameraname_2001_02_03_13_14_15.jpg")
-    True
-    >>> path_is_timestream_image("this_aint_a_tsimage.png")
+    >>> path_is_timestream_file("test_2018_12_31_23_59_59_00.jpg", extensions="tif")
+    False
+    >>> path_is_timestream_file("not-a-timestream.jpg")
     False
     """
-    filename = op.basename(path)
-    m = TS_IMAGE_FILE_RE.search(filename)
-    return m is not None
-
-
-
-def find_timestream_images(rootdir, format=None):
-    """Finds and yields all valid timestream image paths below rootdir"""
-    for root, dirs, files in os.walk(rootdir):
-        for file in files:
-            if format is not None and not file.endswith(format):
-                continue
-            if path_is_timestream_image(file):
-                yield op.join(root, file)
+    if isinstance(extensions, str):
+        extensions = [extensions, ]
+    try:
+        ts_image_path_get_date_index(path)
+        if extensions is not None:
+            return any([path.lower().endswith(ext) for ext in extensions])
+        return True
+    except ValueError:
+        return False
 
 
 class TSv1Stream(object):
 
     def __init__(self, path=None, mode="r", format=None, onerror="warn",
-                 raw_process_params=None):
+                 raw_process_params=None, bundle_level="none"):
         """path is the base directory of a timestream"""
-        self.files = None
+        self.path = None
         self.name = None
         self.format = None
         self.rawparams = raw_process_params
+        self.bundle = bundle_level
         if onerror == "raise" or onerror == "skip" or onerror == "warn":
             self.onerror = onerror
         else:
@@ -68,30 +60,33 @@ class TSv1Stream(object):
         if path is not None:
             self.open(path, mode, format=format)
 
-    def open(self, path, mode="r", format=None, files=None):
+    def open(self, path, mode="r", format=None):
         self.name = op.basename(path)
         if format is not None:
             format = format.lstrip(".")
         self.format = format
         self.path = path
-        if mode == "r":
-            if files is None:
-                files = find_timestream_images(path, format=format)
-            self.files = files
-        else:
-            self.files = []
 
-    def read(self):
-        if self.files is None:
-            raise RuntimeError("TSv1Stream not opened")
-        for path in self.files:
-            try:
-                return TSImage(path=path, raw_process_params=self.rawparams)
-            except ImageIOError as exc:
-                if self.onerror == "raise":
-                    raise exc
-                elif self.onerror == "warn":
-                    warnings.warn(str(exc))
+    def iter(self):
+        def walk_tar(tar):
+            tf = tarfile.TarFile(tar)
+            for entry in tf:
+                if entry.isfile():
+                    if path_is_timestream_file(entry.name, extensions=self.format):
+                        dtidx = ts_image_path_get_date_index(entry.name)
+                        yield TSImage(image=tf.extractfile(entry).read(),
+                                      datetime=dtidx["datetime"],
+                                      subsec_index=dtidx["index"])
+
+        if op.isfile(self.path) and self.path.lower().endswith(".tar"):
+            yield from walk_tar(self.path)
+        for root, dirs, files in os.walk(self.path):
+            for file in files:
+                path = op.join(root, file)
+                if path.lower().endswith(".tar"):
+                    yield from walk_tar(path)
+                if path_is_timestream_file(path, extensions=self.format):
+                    yield TSImage(path=path)
 
 
     def _timestream_path(self, image):
@@ -112,13 +107,7 @@ class TSv1Stream(object):
         image.save(out)
 
     def __iter__(self):
-        return self
-
-    def __next__(self):
-        res = self.read()
-        if res is None:
-            raise StopIteration
-        return res
+        return self.iter()
 
     def close(self):
         pass

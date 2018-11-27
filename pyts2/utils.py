@@ -3,6 +3,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import datetime as dt
+import warnings
+
+import iso8601
+
+
+TS_IMAGE_DATEFMT = "%Y_%m_%d_%H_%M_%S"
+
 
 def nowarnings(func):
     """Decorator to always ignore warnings generated with `func`."""
@@ -12,4 +20,26 @@ def nowarnings(func):
             warnings.simplefilter("ignore")
             return func(*args, **kwargs)
     return wrapped
+
+
+def parse_date(datestr):
+    if isinstance(datestr, dt.datetime):
+        return datestr
+
+    # first, try iso8601 of some form
+    try:
+        return iso8601.parse_date(datestr)
+    except:
+        pass
+    # Then the usual
+    try:
+        return dt.datetime.strptime(datestr, TS_IMAGE_DATEFMT)
+    except:
+        pass
+
+    # Add more things here in try-excepts if we want to accept other date
+    # formats
+
+    raise ValueError("date string '" + datestr + "' doesn't match valid date formats")
+
 
