@@ -21,9 +21,9 @@ def ts_image_path_get_date_index(path):
     m = TS_IMAGE_DATETIME_RE.search(fn)
     if m is None:
         raise ValueError("path '" + path + "' doesn't contain a timestream date")
+
     try:
         index = int(m[2].lstrip("_"))
     except:
         index = 0
     return {"datetime": parse_date(m[1]), "index": index}
-

@@ -36,8 +36,7 @@ def ts_image_path_get_date_index(path):
         index = 0
     return {"datetime": parse_date(m[1]), "index": index}
 
-
-
+  
 def path_is_timestream_file(path, extensions=None):
     """Test if pathname pattern matches the expected
 
@@ -117,7 +116,6 @@ class TSv1Stream(object):
         path = image.datetime.strftime(path)
         path = path.format(base=self.path, name=self.name, ext=self.format)
         return path
-
 
     def write(self, image):
         if self.name is None or self.format is None:
