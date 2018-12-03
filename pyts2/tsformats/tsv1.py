@@ -47,10 +47,10 @@ def path_is_timestream_file(path, extensions=None):
 class TSv1Stream(object):
 
     def __init__(self, path=None, mode="r", format=None, onerror="warn",
-                 raw_process_params=None, bundle_level="none"):
+                 raw_process_params=None, bundle_level="none", name=None):
         """path is the base directory of a timestream"""
+        self.name = name
         self.path = None
-        self.name = None
         self.format = None
         self.rawparams = raw_process_params
         self.bundle = bundle_level
@@ -62,7 +62,8 @@ class TSv1Stream(object):
             self.open(path, mode, format=format)
 
     def open(self, path, mode="r", format=None):
-        self.name = op.basename(path)
+        if self.name is None:
+            self.name = op.splitext(op.basename(path))[0]
         if format is not None:
             format = format.lstrip(".")
         self.format = format
@@ -70,8 +71,8 @@ class TSv1Stream(object):
 
     def iter(self):
         def walk_archive(path):
-            if zipfile.is_zipfile(path):
-                with zipfile.ZipFile(path) as zip:
+            if zipfile.is_zipfile(str(path)):
+                with zipfile.ZipFile(str(path)) as zip:
                     for entry in zip.infolist():
                         if entry.is_dir():
                             continue
@@ -94,8 +95,8 @@ class TSv1Stream(object):
                 raise ValueError(f"'{path}' appears not to be an archive")
 
         def is_archive(path):
-            return op.isfile(path) and \
-                (zipfile.is_zipfile(path) or tarfile.is_tarfile(path))
+            return op.exists(path) and op.isfile(path) and \
+                (zipfile.is_zipfile(str(path)) or tarfile.is_tarfile(path))
 
         if is_archive(self.path):
             yield from walk_archive(self.path)
@@ -112,10 +113,31 @@ class TSv1Stream(object):
     def _timestream_path(self, image):
         """Gets path for timestream image.
         """
-        path = "{base}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_00.{ext}"
+        path = "{base}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{index:02d}.{ext}"
         path = image.datetime.strftime(path)
-        path = path.format(base=self.path, name=self.name, ext=self.format)
+        path = path.format(base=self.path, name=self.name, index=image.subsec_index,
+                           ext=self.format)
         return path
+
+    def _bundle_archive_path(self, image):
+        if self.bundle == "none":
+            return None
+
+        if self.bundle == "root":
+            return self.path
+        elif self.bundle == "year":
+            bpath = f"{self.path}/{self.name}_%Y.zip"
+        elif self.bundle == "month":
+            bpath = f"{self.path}/%Y/{self.name}_%Y_%m.zip"
+        elif self.bundle == "day":
+            bpath = f"{self.path}/%Y/%Y_%m/{self.name}_%Y_%m_%d.zip"
+        elif self.bundle == "hour":
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/{self.name}_%Y_%m_%d_%H.zip"
+        elif self.bundle == "minute":
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M.zip"
+        elif self.bundle == "second":
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M_%S.zip"
+        return image.datetime.strftime(bpath)
 
     def write(self, image):
         if self.name is None or self.format is None:
@@ -123,8 +145,16 @@ class TSv1Stream(object):
         if not isinstance(image, TSImage):
             raise TypeError("image should be a TSImage")
         out = self._timestream_path(image)
-        os.makedirs(op.dirname(out), exist_ok=True)
-        image.save(out)
+        if self.bundle == "none":
+            os.makedirs(op.dirname(out), exist_ok=True)
+            image.save(out)
+        else:
+            bundle = self._bundle_archive_path(image)
+            os.makedirs(op.dirname(bundle), exist_ok=True)
+            print(image, bundle)
+            with zipfile.ZipFile(bundle, mode="a",
+                                 compression=zipfile.ZIP_STORED, allowZip64=True) as zip:
+                zip.writestr(out, image.as_bytes())
 
     def __iter__(self):
         return self.iter()

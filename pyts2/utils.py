@@ -6,6 +6,7 @@
 import datetime as dt
 import warnings
 
+import os
 import iso8601
 
 
@@ -47,3 +48,10 @@ def parse_date(datestr):
     raise ValueError("date string '" + datestr + "' doesn't match valid date formats")
 
 
+
+def find_files(base):
+    if os.path.exists(base) and os.path.isfile(base):
+        yield base
+    for root, dirs, files in os.walk(base):
+        for file in files:
+            yield os.path.join(root, file)
