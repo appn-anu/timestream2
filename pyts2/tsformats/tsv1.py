@@ -14,6 +14,7 @@ import os.path as op
 import re
 import tarfile
 import warnings
+import zipfile
 
 
 
@@ -68,23 +69,42 @@ class TSv1Stream(object):
         self.path = path
 
     def iter(self):
-        def walk_tar(tar):
-            tf = tarfile.TarFile(tar)
-            for entry in tf:
-                if entry.isfile():
-                    if path_is_timestream_file(entry.name, extensions=self.format):
-                        dtidx = ts_image_path_get_date_index(entry.name)
-                        yield TSImage(image=tf.extractfile(entry).read(),
-                                      datetime=dtidx["datetime"],
-                                      subsec_index=dtidx["index"])
+        def walk_archive(path):
+            if zipfile.is_zipfile(path):
+                with zipfile.ZipFile(path) as zip:
+                    for entry in zip.infolist():
+                        if entry.is_dir():
+                            continue
+                        if path_is_timestream_file(entry.filename, extensions=self.format):
+                            dtidx = ts_image_path_get_date_index(entry.filename)
+                            yield TSImage(image=zip.read(entry),
+                                        datetime=dtidx["datetime"],
+                                        subsec_index=dtidx["index"])
+            elif tarfile.is_tarfile(path):
+                with tarfile.TarFile(path) as tar:
+                    for entry in tar:
+                        if not entry.isfile():
+                            continue
+                        if path_is_timestream_file(entry.name, extensions=self.format):
+                            dtidx = ts_image_path_get_date_index(entry.name)
+                            yield TSImage(image=tar.extractfile(entry).read(),
+                                        datetime=dtidx["datetime"],
+                                        subsec_index=dtidx["index"])
+            else:
+                raise ValueError(f"'{path}' appears not to be an archive")
 
-        if op.isfile(self.path) and self.path.lower().endswith(".tar"):
-            yield from walk_tar(self.path)
+        def is_archive(path):
+            return op.isfile(path) and \
+                (zipfile.is_zipfile(path) or tarfile.is_tarfile(path))
+
+        if is_archive(self.path):
+            yield from walk_archive(self.path)
+
         for root, dirs, files in os.walk(self.path):
             for file in files:
                 path = op.join(root, file)
-                if path.lower().endswith(".tar"):
-                    yield from walk_tar(path)
+                if is_archive(path):
+                    yield from walk_archive(path)
                 if path_is_timestream_file(path, extensions=self.format):
                     yield TSImage(path=path)
 

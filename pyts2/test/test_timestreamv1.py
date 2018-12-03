@@ -8,10 +8,14 @@ import datetime as dt
 
 def test_read():
     timestreams = [
-        "testdata/timestreams/big-tarball.tar",
         "testdata/timestreams/flat",
+        "testdata/timestreams/flat.zip",
+        "testdata/timestreams/flat.tar",
         "testdata/timestreams/nested",
+        "testdata/timestreams/nested.zip",
+        "testdata/timestreams/nested.tar",
         "testdata/timestreams/tarball-day",
+        "testdata/timestreams/zipball-day",
     ]
 
     for timestream in timestreams:
