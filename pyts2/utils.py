@@ -48,7 +48,6 @@ def parse_date(datestr):
     raise ValueError("date string '" + datestr + "' doesn't match valid date formats")
 
 
-
 def find_files(base):
     if os.path.exists(base) and os.path.isfile(base):
         yield base

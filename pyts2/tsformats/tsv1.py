@@ -45,6 +45,7 @@ def path_is_timestream_file(path, extensions=None):
 
 
 class TSv1Stream(object):
+    bundle_levels = ("root", "year", "month", "day", "hour", "none")
 
     def __init__(self, path=None, mode="r", format=None, onerror="warn",
                  raw_process_params=None, bundle_level="none", name=None):
@@ -53,6 +54,8 @@ class TSv1Stream(object):
         self.path = None
         self.format = None
         self.rawparams = raw_process_params
+        if bundle_level not in self.bundle_levels:
+            raise ValueError("invalid bundle level %s",  bundle_level)
         self.bundle = bundle_level
         if onerror == "raise" or onerror == "skip" or onerror == "warn":
             self.onerror = onerror
@@ -151,7 +154,6 @@ class TSv1Stream(object):
         else:
             bundle = self._bundle_archive_path(image)
             os.makedirs(op.dirname(bundle), exist_ok=True)
-            print(image, bundle)
             with zipfile.ZipFile(bundle, mode="a",
                                  compression=zipfile.ZIP_STORED, allowZip64=True) as zip:
                 zip.writestr(out, image.as_bytes())

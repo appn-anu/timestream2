@@ -18,6 +18,7 @@ class ImageIOError(Exception):
 
 
 
+@nowarnings
 def ts_imread(image, raw_process_params=None):
     """Read image from file, bytes, or path
 
