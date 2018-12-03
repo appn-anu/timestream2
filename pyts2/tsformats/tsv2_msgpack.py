@@ -6,6 +6,7 @@
 from .base import *
 from .imageio import *
 import datetime as dt
+import os
 
 import imageio
 import msgpack
@@ -22,7 +23,7 @@ class TSv2Stream(object):
     def open(self, path, mode="r"):
         if mode not in ("r", "w"):
             raise ValueError("Invalid mode " + mode)
-        if isinstance(path, str):
+        if isinstance(path, str) or isinstance(path, os.PathLike):
             file = open(path, mode + "b")
         self.fh = file
         if 'r' in mode:
