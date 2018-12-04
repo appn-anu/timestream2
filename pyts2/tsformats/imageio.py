@@ -4,7 +4,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from pyts2.utils import *
-from pyts2.tsformats.base import *
 
 import imageio
 import numpy as np
