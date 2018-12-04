@@ -4,3 +4,4 @@ numpy
 iso8601
 rawpy
 datetime_truncate
+click
