@@ -11,6 +11,7 @@ def test_read():
         "testdata/timestreams/flat",
         "testdata/timestreams/flat.zip",
         "testdata/timestreams/flat.tar",
+        "testdata/timestreams/nested/", # with trailing slash
         "testdata/timestreams/nested",
         "testdata/timestreams/nested.zip",
         "testdata/timestreams/nested.tar",
@@ -20,15 +21,26 @@ def test_read():
 
     for timestream in timestreams:
         for image in TSv1Stream(timestream):
-            assert image.subsec_index == 0
+            assert image.subsecond == 0
+            assert image.index is None
             assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
             assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
+
+    indices = []
+    for image in TSv1Stream("testdata/timestreams/gvlike"):
+        indices.append(image.index)
+        assert image.subsecond == 0
+        assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
+        assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
+    indices.sort()
+    assert indices == ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]
 
 def test_zipout(tmpdir):
     def check_output_ok(outpath):
         for image in TSv1Stream(outpath):
             print(image)
-            assert image.subsec_index == 0
+            assert image.subsecond == 0
+            assert image.index is None
             assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
             assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
 

@@ -15,13 +15,15 @@ def test_roundtrip_v1_to_v2(tmpdir):
     out = TSv2Stream(outpath, "w")
     for image in TSv1Stream("testdata/timestreams/flat/"):
         assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
-        assert image.subsec_index == 0
+        assert image.subsecond == 0
+        assert image.index is None
         assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
         out.write(image)
     out.close()
 
     for image in TSv2Stream(outpath, "r"):
-        assert image.subsec_index == 0
+        assert image.subsecond == 0
+        assert image.index is None
         assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
         assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
 

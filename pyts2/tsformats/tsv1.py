@@ -26,6 +26,10 @@ def path_is_timestream_file(path, extensions=None):
 
     >>> path_is_timestream_file("test_2018_12_31_23_59_59_00.jpg")
     True
+    >>> path_is_timestream_file("test_2018_12_31_23_59_59_00_1.jpg")
+    True
+    >>> path_is_timestream_file("2018_12_31_23_59_59_00.jpg")
+    True
     >>> path_is_timestream_file("test_2018_12_31_23_59_59_00.jpg", extensions="jpg")
     True
     >>> path_is_timestream_file("test_2018_12_31_23_59_59_00.jpg", extensions="tif")
@@ -36,7 +40,9 @@ def path_is_timestream_file(path, extensions=None):
     if isinstance(extensions, str):
         extensions = [extensions, ]
     try:
-        ts_image_path_get_date_index(path)
+        m = TS_IMAGE_DATETIME_RE.search(path)
+        if m is None:
+            return False
         if extensions is not None:
             return any([path.lower().endswith(ext) for ext in extensions])
         return True
@@ -80,20 +86,16 @@ class TSv1Stream(object):
                         if entry.is_dir():
                             continue
                         if path_is_timestream_file(entry.filename, extensions=self.format):
-                            dtidx = ts_image_path_get_date_index(entry.filename)
                             yield TSImage(image=zip.read(entry),
-                                        datetime=dtidx["datetime"],
-                                        subsec_index=dtidx["index"])
+                                          filename=entry.filename)
             elif tarfile.is_tarfile(path):
                 with tarfile.TarFile(path) as tar:
                     for entry in tar:
                         if not entry.isfile():
                             continue
                         if path_is_timestream_file(entry.name, extensions=self.format):
-                            dtidx = ts_image_path_get_date_index(entry.name)
                             yield TSImage(image=tar.extractfile(entry).read(),
-                                        datetime=dtidx["datetime"],
-                                        subsec_index=dtidx["index"])
+                                          filename=entry.name)
             else:
                 raise ValueError(f"'{path}' appears not to be an archive")
 
@@ -116,10 +118,13 @@ class TSv1Stream(object):
     def _timestream_path(self, image):
         """Gets path for timestream image.
         """
-        path = "{base}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{index:02d}.{ext}"
+        idxstr = ""
+        if image.index is not None:
+            idxstr = "_" + str(image.index)
+        path = "{base}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{subsec:02d}{idx}.{ext}"
         path = image.datetime.strftime(path)
-        path = path.format(base=self.path, name=self.name, index=image.subsec_index,
-                           ext=self.format)
+        path = path.format(base=self.path, name=self.name, subsec=image.subsecond,
+                           idx=idxstr, ext=self.format)
         return path
 
     def _bundle_archive_path(self, image):

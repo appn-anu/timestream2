@@ -11,11 +11,15 @@ import numpy as np
 import rawpy
 import datetime as dt
 import os.path as op
+import re
+
+
+TS_IMAGE_DATETIME_RE = re.compile(r"(\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d)(_\d+)?(_\w+)?")
+TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d+)?.(\S+)$", re.I)
 
 
 class ImageIOError(Exception):
     pass
-
 
 
 @nowarnings
@@ -70,33 +74,40 @@ class TSImage(object):
           accessed, the load whole file.
     """
 
-    def __init__(self, path=None, image=None, datetime=None, raw_process_params=None, subsec_index=0):
+    def __init__(self, path=None, image=None, datetime=None,
+                 raw_process_params=None, subsecond=0, index=None,
+                 filename=None):
         self._pixels = None
         self._filelike = None
-        self.subsec_index = subsec_index
-        if path is None and image is None:
+        self.subsecond = subsecond
+        self.index = index
+        self.datetime = None
+        if path is None and image is None or path is not None and image is not None:
             raise ValueError("One of path or image must be given")
 
         self.rawparams = raw_process_params
-        if isinstance(image, bytes):
-            # you can give raw bytes to imageio.imread, so do so
-            return self.read_from(image, datetime)
 
+        # Read pixels
         if path is not None:
-            return self.read_from(path, datetime)
-        elif datetime is None:
-            raise ValueError("Datetime must be given if image is given")
-
-        if not isinstance(image, np.ndarray):
+            self._filelike = path
+        elif isinstance(image, bytes):
+            # you can give raw bytes to imageio.imread, so do so
+            self._filelike = image
+        elif not isinstance(image, np.ndarray):
             raise TypeError("image should be an NxMx3 numpy array, uint8 or uint16, or image bytes")
+        else:
+            self._pixels = image
 
-        if isinstance(datetime, str):
-            datetime = parse_date(datetime)
-        if not isinstance(datetime, dt.datetime):
-            raise TypeError("datetime should be datetime.datetime")
-        self.datetime = datetime
-        self._pixels = image
+        # datetime and other info
+        if datetime is not None:
+            self.datetime = parse_date(datetime)
+        if filename is None and path is not None:
+            self._set_time_from_filename(path)
+        if filename is not None:
+            self._set_time_from_filename(filename)
 
+        if self.datetime is None:
+            raise ValueError("Datetime must be provided somehow")
 
     def pixels():
         doc = "The image pixels"
@@ -111,26 +122,6 @@ class TSImage(object):
             del self._pixels
         return locals()
     pixels = property(**pixels())
-
-    def read_from(self, filelike, datetime=None):
-        """Reads image from a file-like object
-
-        :param filelike: Either a path-like object to a file on disk, or bytes.
-            If bytes, datetime must be given.
-        :param datetime: A datetime object or timestamp.
-        """
-        # handle image lazily, just store the filelike for now
-        self._filelike = filelike
-
-        # handle datetime
-        if datetime is None:
-            dtidx = ts_image_path_get_date_index(filelike)
-            self.datetime = dtidx["datetime"]
-            self.subsec_index = dtidx["index"]
-        else:
-            self.datetime = parse_date(datetime)
-        if not isinstance(self.datetime, dt.datetime):
-            raise TypeError("Don't know what to do with your datetime")
 
     def as_bytes(self, format=None):
         if format is None:
@@ -162,3 +153,26 @@ class TSImage(object):
 
     def __repr__(self):
         return f"TSImage at {self.isodate()}"
+
+    def _set_time_from_filename(self, path):
+        """Extract date and index from path to timestream image
+
+        :param path: File path, with or without directory
+        """
+        fn = op.splitext(op.basename(path))[0]
+        m = TS_IMAGE_DATETIME_RE.search(fn)
+        if m is None:
+            raise ValueError("path '" + path + "' doesn't contain a timestream date")
+
+        dt, subsec, index = m.groups()
+
+        self.datetime = parse_date(dt)
+
+        if subsec is not None:
+            try:
+                self.subsecond = int(subsec.lstrip("_"))
+            except ValueError:
+                self.subsecond = 0
+
+        if index is not None:
+            self.index = index.lstrip("_")
