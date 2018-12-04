@@ -120,9 +120,9 @@ class TSv1Stream(object):
         idxstr = ""
         if image.index is not None:
             idxstr = "_" + str(image.index)
-        path = "{base}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{subsec:02d}{idx}.{ext}"
+        path = "%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{subsec:02d}{idx}.{ext}"
         path = image.datetime.strftime(path)
-        path = path.format(base=self.path, name=self.name, subsec=image.subsecond,
+        path = path.format(name=self.name, subsec=image.subsecond,
                            idx=idxstr, ext=self.format)
         return path
 
@@ -151,16 +151,17 @@ class TSv1Stream(object):
             raise RuntimeError("TSv2Stream not opened")
         if not isinstance(image, TSImage):
             raise TypeError("image should be a TSImage")
-        out = self._timestream_path(image)
+        subpath = self._timestream_path(image)
         if self.bundle == "none":
-            os.makedirs(op.dirname(out), exist_ok=True)
-            image.save(out)
+            outpath = op.join(self.path, subpath)
+            os.makedirs(op.dirname(outpath), exist_ok=True)
+            image.save(outpath)
         else:
             bundle = self._bundle_archive_path(image)
             os.makedirs(op.dirname(bundle), exist_ok=True)
-            with zipfile.ZipFile(bundle, mode="a",
-                                 compression=zipfile.ZIP_STORED, allowZip64=True) as zip:
-                zip.writestr(out, image.as_bytes())
+            with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
+                                 allowZip64=True) as zip:
+                zip.writestr(op.join(self.name, subpath), image.as_bytes())
 
     def __iter__(self):
         return self.iter()
