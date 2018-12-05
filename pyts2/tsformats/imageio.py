@@ -144,7 +144,11 @@ class TSImage(object):
                    image=np.array([[[0, 1, 2], [3, 4, 5]]], dtype='u1'))
 
     def __repr__(self):
-        return f"TSImage at {self.isodate()}"
+        if self.path is not None:
+            return f"Image at {op.basename(self.path)}"
+        else:
+            idx = self.index if self.index is not None else ""
+            return f"Image at {self.isodate()}.{self.subsecond} {idx}"
 
     def _set_time_from_filename(self, path):
         """Extract date and index from path to timestream image
