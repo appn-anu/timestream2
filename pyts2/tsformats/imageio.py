@@ -59,18 +59,6 @@ def ts_imread(image, raw_process_params=None):
 class TSImage(object):
     """Image class for all timestreams
 
-    Essentially only two fields: datetime and image. Image will always be a
-    numpy array. datetime will always be datetime.datetime.
-
-
-    TODO:
-        - subsecond image index
-        - image "names", i.e. the stuff before the underscored dates. Should be
-          handeled like datetimes, i.e. parsed from image path, or manually set
-          for images given from bytes or numpy arrays.
-        - Lazy loading: if given file path, and pixels never accessed, on
-          write, just copy/mv file. If given bytes, just write bytes. If pixels
-          accessed, the load whole file.
     """
 
     def __init__(self, path=None, image=None, datetime=None,
@@ -81,6 +69,7 @@ class TSImage(object):
         self.subsecond = subsecond
         self.index = index
         self.datetime = None
+        self.path = None  # Should only ever be filled if the image was obtained from disk
         if path is None and image is None or path is not None and image is not None:
             raise ValueError("One of path or image must be given")
 
@@ -88,6 +77,7 @@ class TSImage(object):
 
         # Read pixels
         if path is not None:
+            self.path = path
             self._filelike = path
         elif isinstance(image, bytes):
             # you can give raw bytes to imageio.imread, so do so
@@ -112,8 +102,7 @@ class TSImage(object):
         doc = "The image pixels"
         def fget(self):
             if self._pixels is None:
-                self._pixels = ts_imread(self._filelike,
-                                         raw_process_params=self.rawparams)
+                self._pixels = ts_imread(self._filelike, raw_process_params=self.rawparams)
             return self._pixels
         def fset(self, value):
             self._pixels = value
@@ -123,6 +112,10 @@ class TSImage(object):
     pixels = property(**pixels())
 
     def as_bytes(self, format=None):
+        """Returns the bytes representing the image saved in `format`.
+
+        :param format: Image file format as string. See docs for imageio.imwrite().
+        """
         if format is None:
             if isinstance(self._filelike, bytes):
                 return self._filelike

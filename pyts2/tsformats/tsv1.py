@@ -161,7 +161,8 @@ class TSv1Stream(object):
             os.makedirs(op.dirname(bundle), exist_ok=True)
             with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
                                  allowZip64=True) as zip:
-                zip.writestr(op.join(self.name, subpath), image.as_bytes())
+                zip.writestr(op.join(self.name, subpath),
+                             image.as_bytes(format=self.format))
 
     def __iter__(self):
         return self.iter()

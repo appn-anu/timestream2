@@ -32,8 +32,11 @@ def convert(force, informat, format, bundle, input, output):
         sys.exit(1)
     output =  TSv1Stream(output, format=format, bundle_level=bundle)
     for image in input:
-        idx = image.index if image.index is not None else ""
-        click.echo(f"processing {image.isodate()} subsec {image.subsecond} {idx}")
+        if image.path is not None:
+            click.echo(f"processing {image.path}")
+        else:
+            idx = image.index if image.index is not None else ""
+            click.echo(f"processing {image.isodate()} subsec {image.subsecond} {idx}")
         output.write(image)
 
 if __name__ == "__main__":
