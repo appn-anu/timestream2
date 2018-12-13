@@ -3,9 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from .base import *
 from .imageio import *
 import datetime as dt
+import os
 
 import imageio
 import msgpack
@@ -22,7 +22,7 @@ class TSv2Stream(object):
     def open(self, path, mode="r"):
         if mode not in ("r", "w"):
             raise ValueError("Invalid mode " + mode)
-        if isinstance(path, str):
+        if isinstance(path, str) or isinstance(path, os.PathLike):
             file = open(path, mode + "b")
         self.fh = file
         if 'r' in mode:
@@ -39,7 +39,6 @@ class TSv2Stream(object):
         if self.fh is None or self.fh.closed:
             raise RuntimeError("TSv2Stream not opened")
         msgdict = next(self.unpacker)
-        #print(msgdict)
         datestr = msgdict[b"datetime"].decode('ascii')
         imgbytes = msgdict[b"image"]
         return TSImage(image=imgbytes, datetime=datestr)
@@ -53,7 +52,6 @@ class TSv2Stream(object):
         image_enc = image.as_bytes()
         msgdict = {b"datetime": date_enc,
                    b"image": image_enc}
-        #print(msgdict)
         self.fh.write(self.packer.pack(msgdict))
 
     def write_verbaitm(self, bytesorpath, datetime):

@@ -24,10 +24,13 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     install_requires=install_requires,
     tests_require=test_requires,
-    #scripts=scripts,
     description=desc,
+    entry_points='''
+        [console_scripts]
+        ts2tk=pyts2.commandline:tstk_main
+    ''',
     author="Kevin Murray",
-    author_email="spam@kdmurray.id.au",
+    author_email="foss@kdmurray.id.au",
     url="https://github.com/appf-anu/timestream2",
     keywords=["timestream", "timelapse", "photography", "video"],
     classifiers=[
@@ -40,5 +43,5 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         ],
-    test_suite="test",
+    test_suite="tests",
     )

@@ -10,17 +10,20 @@ from .data import SMALL_TIMESTREAMS
 import numpy as np
 import datetime as dt
 
-def test_roundtrip_v1_to_v2():
-    out = TSv2Stream("test.ts2", "w")
+def test_roundtrip_v1_to_v2(tmpdir):
+    outpath = tmpdir.join("test.ts2")
+    out = TSv2Stream(outpath, "w")
     for image in TSv1Stream("testdata/timestreams/flat/"):
         assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
-        assert image.subsec_index == 0
+        assert image.subsecond == 0
+        assert image.index is None
         assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
         out.write(image)
     out.close()
 
-    for image in TSv2Stream("test.ts2", "r"):
-        assert image.subsec_index == 0
+    for image in TSv2Stream(outpath, "r"):
+        assert image.subsecond == 0
+        assert image.index is None
         assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
         assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
 
