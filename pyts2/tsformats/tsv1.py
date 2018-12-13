@@ -48,6 +48,13 @@ def path_is_timestream_file(path, extensions=None):
     except ValueError:
         return False
 
+def extract_datetime(path):
+    m = TS_IMAGE_DATETIME_RE.search(path)
+    if m is None:
+        return path
+    else:
+        return m[0]
+
 
 class TSv1Stream(object):
     bundle_levels = ("root", "year", "month", "day", "hour", "none")
@@ -59,6 +66,7 @@ class TSv1Stream(object):
         self.path = None
         self.format = None
         self.rawparams = raw_process_params
+        self.sorted = True
         if bundle_level not in self.bundle_levels:
             raise ValueError("invalid bundle level %s",  bundle_level)
         self.bundle = bundle_level
@@ -81,13 +89,18 @@ class TSv1Stream(object):
         def walk_archive(path):
             if zipfile.is_zipfile(str(path)):
                 with zipfile.ZipFile(str(path)) as zip:
-                    for entry in zip.infolist():
+                    # ensure sorted iteration
+                    entries = zip.infolist()
+                    entries.sort(key=lambda entry: extract_datetime(entry.filename))
+                    for entry in entries:
                         if entry.is_dir():
                             continue
                         if path_is_timestream_file(entry.filename, extensions=self.format):
                             yield TSImage(image=zip.read(entry),
                                           filename=entry.filename)
             elif tarfile.is_tarfile(path):
+                self.sorted = False
+                warnings.warn("Extracting images from a tar file. Sorted iteration is not guaranteed")
                 with tarfile.TarFile(path) as tar:
                     for entry in tar:
                         if not entry.isfile():
@@ -106,6 +119,9 @@ class TSv1Stream(object):
             yield from walk_archive(self.path)
 
         for root, dirs, files in os.walk(self.path):
+            # ensure sorted iteration
+            dirs.sort()
+            files.sort(key=lambda f: extract_datetime(f))
             for file in files:
                 path = op.join(root, file)
                 if is_archive(path):

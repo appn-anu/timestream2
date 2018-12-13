@@ -20,11 +20,17 @@ def test_read():
     ]
 
     for timestream in timestreams:
-        for image in TSv1Stream(timestream):
+        last_time = None
+        stream = TSv1Stream(timestream)
+        for image in stream:
+            assert stream.sorted == ('tar' not in timestream)
             assert image.subsecond == 0
             assert image.index is None
             assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
             assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
+            if stream.sorted and last_time is not None:
+                assert image.datetime >= last_time
+            last_time = image.datetime
 
     indices = []
     for image in TSv1Stream("testdata/timestreams/gvlike"):
@@ -32,7 +38,7 @@ def test_read():
         assert image.subsecond == 0
         assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
         assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
-    indices.sort()
+    # images should have been in order
     assert indices == ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]
 
 def test_zipout(tmpdir):
