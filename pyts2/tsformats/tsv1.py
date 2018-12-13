@@ -48,6 +48,13 @@ def path_is_timestream_file(path, extensions=None):
     except ValueError:
         return False
 
+def extract_datetime(path):
+    m = TS_IMAGE_DATETIME_RE.search(path)
+    if m is None:
+        return path
+    else:
+        return m[0]
+
 
 class TSv1Stream(object):
     bundle_levels = ("root", "year", "month", "day", "hour", "none")
@@ -84,7 +91,7 @@ class TSv1Stream(object):
                 with zipfile.ZipFile(str(path)) as zip:
                     # ensure sorted iteration
                     entries = zip.infolist()
-                    entries.sort(key=lambda entry: entry.filename)
+                    entries.sort(key=lambda entry: extract_datetime(entry.filename))
                     for entry in entries:
                         if entry.is_dir():
                             continue
@@ -114,7 +121,7 @@ class TSv1Stream(object):
         for root, dirs, files in os.walk(self.path):
             # ensure sorted iteration
             dirs.sort()
-            files.sort()
+            files.sort(key=lambda f: extract_datetime(f))
             for file in files:
                 path = op.join(root, file)
                 if is_archive(path):
