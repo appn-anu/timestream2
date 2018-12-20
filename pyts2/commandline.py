@@ -1,4 +1,5 @@
 from pyts2.tsformats import TSImage, TSv1Stream,  TSv2Stream
+from pyts2.utils import CatchSignals
 import argparse as ap
 import os
 import sys
@@ -33,7 +34,8 @@ def convert(force, informat, format, bundle, input, output):
         sys.exit(1)
     output =  TSv1Stream(output, format=format, bundle_level=bundle)
     for image in input:
-        output.write(image)
+        with CatchSignals():
+            output.write(image)
         click.echo(f"Processing {image}")
 
 if __name__ == "__main__":
