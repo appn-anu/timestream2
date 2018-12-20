@@ -18,7 +18,8 @@ def tstk_main():
 @click.option("--informat", "-F", default=None,
               help="Input image format (use extension as lower case for raw formats)")
 @click.option("--format", "-f", default="tif",
-              help="Output image format (use extension as lower case for raw formats)")
+              help="Output image format (use extension as lower case for raw formats. "
+                   "Use 'verbatim' to output the source file as is)")
 @click.option("--bundle", "-b", type=Choice(TSv1Stream.bundle_levels), default="none",
               help="Level at which to bundle files")
 @click.argument("input")
