@@ -48,12 +48,37 @@ def path_is_timestream_file(path, extensions=None):
     except ValueError:
         return False
 
+
 def extract_datetime(path):
     m = TS_IMAGE_DATETIME_RE.search(path)
     if m is None:
         return path
     else:
         return m[0]
+
+
+def _get_image(path=None, zip=None, tar=None, entry=None):
+    """Callback to be used with TSv1Stream.iter(), such that TSImages are itered."""
+    if path is not None:
+        return TSImage(path=path)
+    elif zip is not None and entry is not None:
+        return TSImage(image=zip.read(entry), filename=entry.filename)
+    elif tar is not None and entry is not None:
+        return TSImage(image=tar.extractfile(entry).read(), filename=entry.name)
+    else:
+        raise ValueError("Bad arguments to _get_image")
+
+
+def _get_datetime(path=None, zip=None, tar=None, entry=None):
+    """Callback to be used with TSv1Stream.iter(), such that datetimes are itered."""
+    if zip is not None and entry is not None:
+        path = entry.filename
+    elif tar is not None and entry is not None:
+        path = entry.name
+    if path is not None:
+        return path_to_datetime_subsec_index(path)
+    else:
+        raise ValueError("Bad arguments to _get_image")
 
 
 class TimeStream(object):
@@ -85,7 +110,11 @@ class TimeStream(object):
         self.format = format
         self.path = path
 
-    def iter(self):
+
+    def iter_datetimes(self):
+        yield from self.iter(callback=_get_datetime)
+
+    def iter(self, callback=_get_image):
         def walk_archive(path):
             if zipfile.is_zipfile(str(path)):
                 with zipfile.ZipFile(str(path)) as zip:
@@ -96,8 +125,7 @@ class TimeStream(object):
                         if entry.is_dir():
                             continue
                         if path_is_timestream_file(entry.filename, extensions=self.format):
-                            yield TSImage(image=zip.read(entry),
-                                          filename=entry.filename)
+                            yield callback(zip=zip, entry=entry)
             elif tarfile.is_tarfile(path):
                 self.sorted = False
                 warnings.warn("Extracting images from a tar file. Sorted iteration is not guaranteed")
@@ -106,10 +134,8 @@ class TimeStream(object):
                         if not entry.isfile():
                             continue
                         if path_is_timestream_file(entry.name, extensions=self.format):
-                            yield TSImage(image=tar.extractfile(entry).read(),
-                                          filename=entry.name)
-            else:
-                raise ValueError(f"'{path}' appears not to be an archive")
+                            yield callback(tar=tar, entry=entry)
+            else: raise ValueError(f"'{path}' appears not to be an archive")
 
         def is_archive(path):
             return op.exists(path) and op.isfile(path) and \
@@ -127,7 +153,7 @@ class TimeStream(object):
                 if is_archive(path):
                     yield from walk_archive(path)
                 if path_is_timestream_file(path, extensions=self.format):
-                    yield TSImage(path=path)
+                    yield callback(path=path)
 
 
     def _timestream_path(self, image):
@@ -181,7 +207,7 @@ class TimeStream(object):
                              image.as_bytes(format=self.format))
 
     def __iter__(self):
-        return self.iter()
+        return self.iter(callback=_get_image)
 
     def close(self):
         pass

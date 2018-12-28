@@ -55,6 +55,29 @@ def ts_imread(image, raw_process_params=None):
         raise ImageIOError("Failed to read image:\n" + str(err)) from err
 
 
+def path_to_datetime_subsec_index(path):
+    """Extract date and index from path to timestream image
+
+    :param path: File path, with or without directory
+    """
+    fn = op.splitext(op.basename(path))[0]
+    m = TS_IMAGE_DATETIME_RE.search(fn)
+    if m is None:
+        raise ValueError("path '" + path + "' doesn't contain a timestream date")
+
+    dt, subsec, index = m.groups()
+
+    datetime = parse_date(dt)
+
+    if subsec is not None:
+        try:
+            subsec = int(subsec.lstrip("_"))
+        except ValueError:
+            subsec = 0
+
+    if index is not None:
+        index = index.lstrip("_")
+    return datetime, subsec, index
 
 class TSImage(object):
     """Image class for all timestreams
@@ -156,20 +179,4 @@ class TSImage(object):
 
         :param path: File path, with or without directory
         """
-        fn = op.splitext(op.basename(path))[0]
-        m = TS_IMAGE_DATETIME_RE.search(fn)
-        if m is None:
-            raise ValueError("path '" + path + "' doesn't contain a timestream date")
-
-        dt, subsec, index = m.groups()
-
-        self.datetime = parse_date(dt)
-
-        if subsec is not None:
-            try:
-                self.subsecond = int(subsec.lstrip("_"))
-            except ValueError:
-                self.subsecond = 0
-
-        if index is not None:
-            self.index = index.lstrip("_")
+        (self.datetime, self.subsecond, self.index) = path_to_datetime_subsec_index(path)
