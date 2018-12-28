@@ -111,12 +111,13 @@ class TSImage(object):
         return locals()
     pixels = property(**pixels())
 
-    def as_bytes(self, format=None):
+    def as_bytes(self, format="verbatim"):
         """Returns the bytes representing the image saved in `format`.
 
-        :param format: Image file format as string. See docs for imageio.imwrite().
+        :param format: Image file format as string. See docs for imageio.imwrite(). If
+                       `format` is "verbatim", return the source file's bytes
         """
-        if format is None:
+        if format is None or format=="verbatim":
             if isinstance(self._filelike, bytes):
                 return self._filelike
             elif op.isfile(self._filelike):

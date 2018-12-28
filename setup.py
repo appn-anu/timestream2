@@ -27,7 +27,7 @@ setup(
     description=desc,
     entry_points='''
         [console_scripts]
-        ts2tk=pyts2.commandline:tstk_main
+        tstk=pyts2.commandline:tstk_main
     ''',
     author="Kevin Murray",
     author_email="foss@kdmurray.id.au",
