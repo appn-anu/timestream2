@@ -1,0 +1,14 @@
+name: pyts2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.*
+  - numpy
+  - flask
+  - imageio
+  - msgpack-python
+  - iso8601
+  - click
+  - pip:
+    - rawpy
+    - datetime_truncate

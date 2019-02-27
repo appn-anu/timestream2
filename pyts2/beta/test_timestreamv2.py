@@ -3,8 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from pyts2.tsformats import TSv1Stream,  TSv2Stream
-from .data import SMALL_TIMESTREAMS
+from pyts2.timestream import TimeStream
+from .tsv2_msgpack import TSv2Stream
+from pyts2.test.data import SMALL_TIMESTREAMS
 
 
 import numpy as np
@@ -13,7 +14,7 @@ import datetime as dt
 def test_roundtrip_v1_to_v2(tmpdir):
     outpath = tmpdir.join("test.ts2")
     out = TSv2Stream(outpath, "w")
-    for image in TSv1Stream("testdata/timestreams/flat/"):
+    for image in TimeStream("testdata/timestreams/flat/"):
         assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
         assert image.subsecond == 0
         assert image.index is None
