@@ -1,5 +1,6 @@
+from pyts2.time import *
 from pyts2.timestream import TimeStream
-from pyts2.utils import parse_date, find_files
+from pyts2.utils import find_files
 
 from .data import *
 
@@ -20,44 +21,48 @@ def test_read():
     ]
 
     for timestream in timestreams:
-        last_time = None
         stream = TimeStream(timestream)
-        for image in stream:
+        for i, image in enumerate(stream):
             assert stream.sorted == ('tar' not in timestream)
-            assert image.subsecond == 0
-            assert image.index is None
             assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
-            assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
-            if stream.sorted and last_time is not None:
-                assert image.datetime >= last_time
-            last_time = image.datetime
+            # Instant
+            expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
+                                    subsecond=0, index=None)
+            assert isinstance(image.instant, TSInstant)
+            if stream.sorted:
+                assert image.instant == expect_inst
+            else:
+                assert image.instant.datetime in SMALL_TIMESTREAMS["expect_times"]
 
-        last_time = None
         stream = TimeStream(timestream)
-        for i, (dt, subsec, idx) in enumerate(stream.iter_datetimes()):
-            if stream.sorted and last_time is not None:
-                assert dt >= last_time
-            assert dt in SMALL_TIMESTREAMS["expect_times"]
-            assert subsec == 0
-            assert idx is None
+        for i, inst in enumerate(stream.iter_instants()):
+            assert isinstance(inst, TSInstant)
+            expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
+                                    subsecond=0, index=None)
+            if stream.sorted:
+                assert inst == expect_inst
+            else:
+                assert image.instant.datetime in SMALL_TIMESTREAMS["expect_times"]
+                assert inst.subsecond == 0
+                assert inst.index is None
 
 
 def test_gvlike():
     for i, image in enumerate(TimeStream("testdata/timestreams/gvlike")):
-        assert image.subsecond == GVLIKE_TIMESTREAM["expect_subsecond"]
+        expect_inst = TSInstant(GVLIKE_TIMESTREAM["expect_datetime"],
+                                GVLIKE_TIMESTREAM["expect_subsecond"],
+                                GVLIKE_TIMESTREAM["expect_indices"][i])
+        assert image.instant == expect_inst
         assert np.array_equal(image.pixels, GVLIKE_TIMESTREAM["expect_pixels"])
-        assert image.datetime == GVLIKE_TIMESTREAM["expect_datetime"]
-        assert image.index == GVLIKE_TIMESTREAM["expect_indices"][i]
 
 
 def test_zipout(tmpdir):
     def check_output_ok(outpath):
-        for image in TimeStream(outpath):
-            print(image)
-            assert image.subsecond == 0
-            assert image.index is None
+        for i, image in enumerate(TimeStream(outpath)):
+            expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
+                                    subsecond=0, index=None)
+            assert image.instant == expect_inst
             assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
-            assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
 
     outputs = {
         "root":  [

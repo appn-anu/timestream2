@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from pyts2.time import *
 from pyts2.utils import *
 
 import imageio
@@ -13,8 +14,6 @@ import os.path as op
 import re
 
 
-TS_IMAGE_DATETIME_RE = re.compile(r"(\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d)(_\d+)?(_\w+)?")
-TS_IMAGE_FILE_RE = re.compile(r"\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d(_\d+)?.(\S+)$", re.I)
 
 
 class ImageIOError(Exception):
@@ -55,43 +54,19 @@ def ts_imread(image, raw_process_params=None):
         raise ImageIOError("Failed to read image:\n" + str(err)) from err
 
 
-def path_to_datetime_subsec_index(path):
-    """Extract date and index from path to timestream image
-
-    :param path: File path, with or without directory
-    """
-    fn = op.splitext(op.basename(path))[0]
-    m = TS_IMAGE_DATETIME_RE.search(fn)
-    if m is None:
-        raise ValueError("path '" + path + "' doesn't contain a timestream date")
-
-    dt, subsec, index = m.groups()
-
-    datetime = parse_date(dt)
-
-    if subsec is not None:
-        try:
-            subsec = int(subsec.lstrip("_"))
-        except ValueError:
-            subsec = 0
-
-    if index is not None:
-        index = index.lstrip("_")
-    return datetime, subsec, index
 
 class TSImage(object):
     """Image class for all timestreams
-
     """
 
-    def __init__(self, path=None, image=None, datetime=None,
-                 raw_process_params=None, subsecond=0, index=None,
+    def __init__(self, path=None, image=None, raw_process_params=None,
+                 datetime=None, subsecond=0, index=None, instant=None,
                  filename=None):
         self._pixels = None
         self._filelike = None
-        self.subsecond = subsecond
-        self.index = index
-        self.datetime = None
+        self.instant = instant
+        if datetime is not None:
+            self.instant = TSInstant(parse_date(datetime), subsecond, index)
         self.path = None  # Should only ever be filled if the image was obtained from disk
         if path is None and image is None or path is not None and image is not None:
             raise ValueError("One of path or image must be given")
@@ -111,15 +86,13 @@ class TSImage(object):
             self._pixels = image
 
         # datetime and other info
-        if datetime is not None:
-            self.datetime = parse_date(datetime)
-        if filename is None and path is not None:
-            self._set_time_from_filename(path)
-        if filename is not None:
-            self._set_time_from_filename(filename)
+        if filename is None and path is not None and self.instant is None:
+            self.instant = TSInstant.from_path(path)
+        elif filename is not None and self.instant is None:
+            self.instant = TSInstant.from_path(filename)
 
-        if self.datetime is None:
-            raise ValueError("Datetime must be provided somehow")
+        if self.instant is None:
+            raise ValueError("Image instant must be provided somehow")
 
     def pixels():
         doc = "The image pixels"
@@ -152,7 +125,7 @@ class TSImage(object):
 
     def isodate(self):
         """convenience helper to get iso8601 string"""
-        return self.datetime.strftime("%Y-%m-%dT%H:%M:%S")
+        return self.instant.isodate("%Y-%m-%dT%H:%M:%S")
 
     def save(self, outpath):
         """Writes file to `outpath`, in whatever format the extension of `outpath` suggests.
@@ -164,19 +137,11 @@ class TSImage(object):
     @classmethod
     def _fakeimg(cls):
         """Generates a fake image for testing etc."""
-        return cls(datetime="2018-10-11T01:02:03",
+        return cls(datetime="2018-10-14T01:02:03",
                    image=np.array([[[0, 1, 2], [3, 4, 5]]], dtype='u1'))
 
     def __repr__(self):
         if self.path is not None:
             return f"Image at {op.basename(self.path)}"
         else:
-            idx = self.index if self.index is not None else ""
-            return f"Image at {self.isodate()}.{self.subsecond} {idx}"
-
-    def _set_time_from_filename(self, path):
-        """Extract date and index from path to timestream image
-
-        :param path: File path, with or without directory
-        """
-        (self.datetime, self.subsecond, self.index) = path_to_datetime_subsec_index(path)
+            return f"Image at {repr(self.instant)}"

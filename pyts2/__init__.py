@@ -4,8 +4,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-from .imageio import TSImage
-from .timestream import TimeStream
-from ._version import get_versions
+from pyts2.imageio import TSImage
+from pyts2.time import TSInstant
+from pyts2.timestream import TimeStream
+from pyts2._version import get_versions
 __version__ = get_versions()['version']
 del get_versions

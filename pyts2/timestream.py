@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from pyts2.time import *
 from pyts2.imageio import *
 from pyts2.utils import *
 
@@ -14,7 +15,6 @@ import re
 import tarfile
 import warnings
 import zipfile
-
 
 
 def path_is_timestream_file(path, extensions=None):
@@ -76,7 +76,7 @@ def _get_datetime(path=None, zip=None, tar=None, entry=None):
     elif tar is not None and entry is not None:
         path = entry.name
     if path is not None:
-        return path_to_datetime_subsec_index(path)
+        return TSInstant.from_path(path)
     else:
         raise ValueError("Bad arguments to _get_image")
 
@@ -111,7 +111,7 @@ class TimeStream(object):
         self.path = path
 
 
-    def iter_datetimes(self):
+    def iter_instants(self):
         yield from self.iter(callback=_get_datetime)
 
     def iter(self, callback=_get_image):
@@ -160,11 +160,12 @@ class TimeStream(object):
         """Gets path for timestream image.
         """
         idxstr = ""
-        if image.index is not None:
-            idxstr = "_" + str(image.index)
+        inst = image.instant
+        if inst.index is not None:
+            idxstr = "_" + str(inst.index)
         path = "%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{subsec:02d}{idx}.{ext}"
-        path = image.datetime.strftime(path)
-        path = path.format(name=self.name, subsec=image.subsecond,
+        path = inst.datetime.strftime(path)
+        path = path.format(name=self.name, subsec=inst.subsecond,
                            idx=idxstr, ext=self.format)
         return path
 
@@ -186,7 +187,7 @@ class TimeStream(object):
             bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M.zip"
         elif self.bundle == "second":
             bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M_%S.zip"
-        return image.datetime.strftime(bpath)
+        return image.instant.datetime.strftime(bpath)
 
     def write(self, image):
         if self.name is None or self.format is None:
