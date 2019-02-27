@@ -43,7 +43,7 @@ def test_read():
 
 
 def test_gvlike():
-    for i, image in enumerate(TSv1Stream("testdata/timestreams/gvlike")):
+    for i, image in enumerate(TimeStream("testdata/timestreams/gvlike")):
         assert image.subsecond == GVLIKE_TIMESTREAM["expect_subsecond"]
         assert np.array_equal(image.pixels, GVLIKE_TIMESTREAM["expect_pixels"])
         assert image.datetime == GVLIKE_TIMESTREAM["expect_datetime"]
