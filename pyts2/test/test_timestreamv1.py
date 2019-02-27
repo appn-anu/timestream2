@@ -1,7 +1,7 @@
 from pyts2.timestream import TimeStream
 from pyts2.utils import parse_date, find_files
 
-from .data import SMALL_TIMESTREAMS
+from .data import *
 
 import numpy as np
 import datetime as dt
@@ -32,14 +32,23 @@ def test_read():
                 assert image.datetime >= last_time
             last_time = image.datetime
 
-    indices = []
-    for image in TimeStream("testdata/timestreams/gvlike"):
-        indices.append(image.index)
-        assert image.subsecond == 0
-        assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
-        assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
-    # images should have been in order
-    assert indices == ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]
+        last_time = None
+        stream = TimeStream(timestream)
+        for i, (dt, subsec, idx) in enumerate(stream.iter_datetimes()):
+            if stream.sorted and last_time is not None:
+                assert dt >= last_time
+            assert dt in SMALL_TIMESTREAMS["expect_times"]
+            assert subsec == 0
+            assert idx is None
+
+
+def test_gvlike():
+    for i, image in enumerate(TimeStream("testdata/timestreams/gvlike")):
+        assert image.subsecond == GVLIKE_TIMESTREAM["expect_subsecond"]
+        assert np.array_equal(image.pixels, GVLIKE_TIMESTREAM["expect_pixels"])
+        assert image.datetime == GVLIKE_TIMESTREAM["expect_datetime"]
+        assert image.index == GVLIKE_TIMESTREAM["expect_indices"][i]
+
 
 def test_zipout(tmpdir):
     def check_output_ok(outpath):
