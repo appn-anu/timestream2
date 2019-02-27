@@ -1,4 +1,4 @@
-from pyts2.timestream import TSv1Stream
+from pyts2.timestream import TimeStream
 from pyts2.utils import parse_date, find_files
 
 from .data import SMALL_TIMESTREAMS
@@ -21,7 +21,7 @@ def test_read():
 
     for timestream in timestreams:
         last_time = None
-        stream = TSv1Stream(timestream)
+        stream = TimeStream(timestream)
         for image in stream:
             assert stream.sorted == ('tar' not in timestream)
             assert image.subsecond == 0
@@ -33,7 +33,7 @@ def test_read():
             last_time = image.datetime
 
     indices = []
-    for image in TSv1Stream("testdata/timestreams/gvlike"):
+    for image in TimeStream("testdata/timestreams/gvlike"):
         indices.append(image.index)
         assert image.subsecond == 0
         assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
@@ -43,7 +43,7 @@ def test_read():
 
 def test_zipout(tmpdir):
     def check_output_ok(outpath):
-        for image in TSv1Stream(outpath):
+        for image in TimeStream(outpath):
             print(image)
             assert image.subsecond == 0
             assert image.index is None
@@ -94,9 +94,9 @@ def test_zipout(tmpdir):
         outpath = tmpdir.join(level, "output")
         if level == "root":
             outpath += ".zip"
-        out = TSv1Stream(path=outpath, mode="w", format="tif", bundle_level=level,
+        out = TimeStream(path=outpath, mode="w", format="tif", bundle_level=level,
                          name="output")
-        for image in TSv1Stream("testdata/timestreams/nested"):
+        for image in TimeStream("testdata/timestreams/nested"):
             out.write(image)
         out.close()
         check_output_ok(outpath)
