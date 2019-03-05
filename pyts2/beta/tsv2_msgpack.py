@@ -48,7 +48,7 @@ class TSv2Stream(object):
             raise RuntimeError("TSv2Stream not opened")
         if not isinstance(image, TSImage):
             raise TypeError("image should be a TSImage")
-        date_enc = image.datetime.strftime(self.DATE_FORMAT).encode("ascii")
+        date_enc = image.instant.datetime.strftime(self.DATE_FORMAT).encode("ascii")
         image_enc = image.as_bytes()
         msgdict = {b"datetime": date_enc,
                    b"image": image_enc}

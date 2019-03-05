@@ -108,8 +108,8 @@ def test_zipout(tmpdir):
         outpath = tmpdir.join(level, "output")
         if level == "root":
             outpath += ".zip"
-        out = TimeStream(path=outpath, mode="w", format="tif", bundle_level=level,
-                         name="output")
+        out = TimeStream(path=outpath, mode="w", format="tif",
+                         bundle_level=level, name="output")
         for image in TimeStream("testdata/timestreams/nested"):
             out.write(image)
         out.close()

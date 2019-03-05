@@ -14,17 +14,20 @@ import datetime as dt
 def test_roundtrip_v1_to_v2(tmpdir):
     outpath = tmpdir.join("test.ts2")
     out = TSv2Stream(outpath, "w")
-    for image in TimeStream("testdata/timestreams/flat/"):
-        assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
-        assert image.subsecond == 0
-        assert image.index is None
-        assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
+    for i, image in enumerate(TimeStream("testdata/timestreams/flat/")):
         out.write(image)
     out.close()
 
     for image in TSv2Stream(outpath, "r"):
-        assert image.subsecond == 0
-        assert image.index is None
+        # Instant
+        expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
+                                subsecond=0, index=None)
+        assert isinstance(image.instant, TSInstant)
+        if stream.sorted:
+            assert image.instant == expect_inst
+        else:
+            assert image.instant.datetime in SMALL_TIMESTREAMS["expect_times"]
+            assert image.subsecond == 0
+            assert image.index is None
         assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
-        assert image.datetime in SMALL_TIMESTREAMS["expect_times"]
 
