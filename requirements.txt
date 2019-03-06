@@ -5,3 +5,4 @@ iso8601
 rawpy
 datetime_truncate
 click
+dataclasses # Required for python3.6, but not 3.7
