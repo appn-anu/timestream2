@@ -15,6 +15,7 @@ class TSv2Stream(object):
     DATE_FORMAT = "%Y-%m-%dT%H:%M:%S" # FIXME: time zones
 
     def __init__(self, path=None, mode="r"):
+        self.sorted = False  # FIXME: support sorted iteration
         self.fh = None
         if path is not None:
             self.open(path, mode)
