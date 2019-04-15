@@ -141,7 +141,7 @@ class TSImage(object):
                    image=np.array([[[0, 1, 2], [3, 4, 5]]], dtype='u1'))
 
     def __repr__(self):
+        where = repr(self.instant)
         if self.path is not None:
-            return f"Image at {op.basename(self.path)}"
-        else:
-            return f"Image at {repr(self.instant)}"
+            where = op.basename(self.path)
+        return "Image at {}".format(where)
