@@ -5,12 +5,6 @@ import os.path as op
 import iso8601
 
 
-try:
-    dataclass()
-except NameError:
-    from dataclasses import dataclass
-
-
 TS_IMAGE_DATEFMT = "%Y_%m_%d_%H_%M_%S"
 TS_IMAGE_DATETIME_RE = re.compile(r"(\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d)(_\d+)?(_\w+)?")
 
