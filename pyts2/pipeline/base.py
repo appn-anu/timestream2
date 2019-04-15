@@ -25,6 +25,8 @@ class TSPipeline(object):
         # as a pipeline step
         for step in self.steps:
             image = step.process_image(image)
+            if image is None:
+                break
         return image
 
     def process_from(self, input_stream, ncpus=1):

@@ -14,8 +14,6 @@ import os.path as op
 import re
 
 
-
-
 class ImageIOError(Exception):
     pass
 
