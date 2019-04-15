@@ -41,8 +41,7 @@ def parse_date(datestr):
     raise ValueError("date string '" + datestr + "' doesn't match valid date formats")
 
 
-@dataclass
-class TSInstant:
+class TSInstant(object):
     """
     TSInstant: a generalised "moment in time", including both timepoint and
     optional index within a timepoint.
@@ -52,9 +51,6 @@ class TSInstant:
     >>> TSInstant(datetime.datetime(2017, 01, 02, 03, 04, 05), 0, "0011")
     2017_01_02_03_04_05_00_0011
     """
-    datetime: datetime.datetime
-    subsecond: int = 0
-    index: str = None
 
     def __init__(self, datetime, subsecond=0, index=None):
         self.datetime = parse_date(datetime)
@@ -65,6 +61,44 @@ class TSInstant:
         idx = "" if self.index is None else f"_{self.index}"
         subsec = f"_{self.subsecond:02d}"
         return f"{self.datetime.strftime('%Y_%m_%d_%H_%M_%S')}{subsec}{idx}"
+
+
+    def __eq__(self, other):
+        return (self.datetime, self.subsecond, self.index) == \
+               (other.datetime, other.subsecond, other.index)
+
+    def __lt__(self, other):
+        if self.index is not None and other.index is not None:
+            return (self.datetime, self.subsecond, self.index) < \
+                (other.datetime, other.subsecond, other.index)
+        else:
+            return (self.datetime, self.subsecond) < \
+                (other.datetime, other.subsecond)
+
+    def __le__(self, other):
+        if self.index is not None and other.index is not None:
+            return (self.datetime, self.subsecond, self.index) <= \
+                (other.datetime, other.subsecond, other.index)
+        else:
+            return (self.datetime, self.subsecond) <= \
+                (other.datetime, other.subsecond)
+
+    def __gt__(self, other):
+        if self.index is not None and other.index is not None:
+            return (self.datetime, self.subsecond, self.index) > \
+                (other.datetime, other.subsecond, other.index)
+        else:
+            return (self.datetime, self.subsecond) > \
+                (other.datetime, other.subsecond)
+
+    def __ge__(self, other):
+        if self.index is not None and other.index is not None:
+            return (self.datetime, self.subsecond, self.index) >= \
+                (other.datetime, other.subsecond, other.index)
+        else:
+            return (self.datetime, self.subsecond) >= \
+                (other.datetime, other.subsecond)
+
 
     def __repr__(self):
         return str(self)
