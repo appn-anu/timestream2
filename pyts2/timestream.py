@@ -60,10 +60,19 @@ class ZipContentFetcher(object):
         with zipfile.ZipFile(str(self.zipfile)) as zfh:
             return zfh.read(self.pathinzip)
 
+class TarContentFetcher(object):
+    def __init__(self, tarfile, pathintar):
+        self.tarfile = tarfile
+        self.pathintar = pathintar
+
+    def get(self):
+        with tarfile.TarFile(self.tarfile) as tfh:
+            return tar.extractfile(self.pathintar).read()
+
 
 class FileContentFetcher(object):
     def __init__(self, path):
-        self.path = path
+        self.path = Path(path)
 
     def get(self):
         with open(self.path, "rb") as fh:
@@ -160,7 +169,11 @@ class TimeStream(object):
         self.format = format
         self.path = path
 
-    def iter(self):
+    @property
+    def instants(self):
+        return list(sorted(f.instant for f in self.iter(tar_contents=False)))
+
+    def iter(self, tar_contents=True):
         def walk_archive(path):
             if zipfile.is_zipfile(str(path)):
                 with zipfile.ZipFile(str(path)) as zip:
@@ -182,7 +195,11 @@ class TimeStream(object):
                             continue
                         if path_is_timestream_file(entry.name, extensions=self.format):
                             filebytes = tar.extractfile(entry).read()
-                            yield TimestreamFile.from_bytes(filebytes, filename=entry.name)
+                            if tar_contents:
+                                yield TimestreamFile.from_bytes(filebytes, filename=entry.name)
+                            else:
+                                yield TimestreamFile(filename=entry.name,
+                                                     fetcher=TarContentFetcher(path, entry.name))
             else: raise ValueError(f"'{path}' appears not to be an archive")
 
         def is_archive(path):

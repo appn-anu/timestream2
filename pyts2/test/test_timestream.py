@@ -19,18 +19,17 @@ def test_read():
         "testdata/timestreams/zipball-day",
     ]
 
+    expect_insts = [TSInstant(t, subsecond=0, index=None)
+                    for t in SMALL_TIMESTREAMS["expect_times"]]
     for timestream in timestreams:
         stream = TimeStream(timestream)
         for i, file in enumerate(stream):
             assert stream.sorted == ('tar' not in timestream)
-            # Instant
-            expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
-                                    subsecond=0, index=None)
             assert isinstance(file.instant, TSInstant)
             if stream.sorted:
-                assert file.instant == expect_inst
-            else:
-                assert file.instant.datetime in SMALL_TIMESTREAMS["expect_times"]
+                assert file.instant == expect_insts[i]
+
+        assert stream.instants == expect_insts
 
 
 def test_gvlike():
