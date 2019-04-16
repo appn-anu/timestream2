@@ -3,7 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from pyts2 import TSImage, TimeStream
+from pyts2 import TimeStream
 from pyts2.utils import CatchSignalThenExit
 import argparse as ap
 import os
@@ -33,11 +33,11 @@ def tstk_main():
 @click.argument("output")
                 #help="Output file or directory")
 def bundle(force, informat, format, bundle, input, output):
-    input = FileStream(input, format=informat)
+    input = TimeStream(input, format=informat)
     if os.path.exists(output) and not force:
         click.echo(f"ERROR: output exists: {output}", err=True)
         sys.exit(1)
-    output =  FileStream(output, format=format, bundle_level=bundle)
+    output =  TimeStream(output, format=format, bundle_level=bundle)
     for image in input:
         with CatchSignalThenExit():
             output.write(image)

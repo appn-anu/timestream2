@@ -17,5 +17,3 @@ def test_tsinstant_cmp():
         assert bigger >= bigger
         assert not bigger <= smaller
         assert bigger <= bigger
-
-

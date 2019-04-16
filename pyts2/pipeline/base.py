@@ -10,7 +10,6 @@ class PipelineStep(object):
 
 
 class TSPipeline(object):
-
     def __init__(self):
         self.steps = []
 
