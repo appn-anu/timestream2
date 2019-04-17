@@ -63,10 +63,12 @@ def audit(output, input, threads=1, informat=None):
     )
 
     input = TimeStream(input, format=informat)
-    for image in pipe.process(input, ncpus=threads):
-        if pipe.n % 1000 == 0:
-            pipe.report.save(output)
-    pipe.report.save(output)
+    try:
+        for image in pipe.process(input, ncpus=threads):
+            if pipe.n % 1000 == 0:
+                pipe.report.save(output)
+    finally:
+        pipe.report.save(output)
 
 if __name__ == "__main__":
     tstk_main()

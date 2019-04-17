@@ -12,6 +12,7 @@ import datetime as dt
 import os.path as op
 import re
 import io
+import sys
 
 import imageio
 import numpy as np
@@ -156,7 +157,11 @@ class TimestreamImage(TimestreamFile):
 
     @property
     def pil(self):
-        return Image.fromarray(self.pixels)
+        if self.pixels.dtype == np.uint8:
+            return Image.fromarray(self.pixels)
+        elif self.pixels.dtype == np.uint16:
+            pix = (self.pixels / 256.0).astype(np.uint8)
+            return Image.fromarray(pix)
 
 
     @classmethod
