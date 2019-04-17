@@ -15,4 +15,5 @@ dependencies:
   - requests
   - pip:
     - rawpy
+    - tqdm
     - datetime_truncate

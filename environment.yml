@@ -12,4 +12,5 @@ dependencies:
   - zbarlight
   - pip:
     - rawpy
+    - tqdm
     - datetime_truncate
