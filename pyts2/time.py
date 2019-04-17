@@ -62,6 +62,8 @@ class TSInstant(object):
 
     def __init__(self, datetime, subsecond=0, index=None):
         self.datetime = parse_date(datetime)
+        if subsecond is None:
+            subsecond = 0
         self.subsecond = int(subsecond)
         self.index = index
 

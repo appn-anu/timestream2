@@ -1,4 +1,4 @@
-name: pyts2
+name: pyts2-dev
 channels:
   - conda-forge
 dependencies:
@@ -10,6 +10,9 @@ dependencies:
   - iso8601
   - click
   - zbarlight
+  - pytest
+  - pytest-remotedata
+  - requests
   - pip:
     - rawpy
     - datetime_truncate

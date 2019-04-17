@@ -3,10 +3,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from collections import defaultdict
+from os import path as op
+from sys import stderr, stdout, stdin
 
 class TSPipeline(object):
-    def __init__(self):
-        self.steps = []
+    def __init__(self, *args):
+        self.steps = args
 
     def add_step(self, step):
         if not hasattr(step, "process_file"):
@@ -46,6 +49,35 @@ class TSPipeline(object):
         # TODO needed so that pipelines can be used as files
         pass
 
+
+
+
+
+class ResultRecorder(object):
+
+    def __init__(self):
+        self.fields = []
+        self.data = defaultdict(dict)
+
+    def record(self, instant, **kwargs):
+        for key, val in kwargs.items():
+            if key not in self.fields:
+                self.fields.append(key)
+            self.data[repr(instant)].update(kwargs.copy())
+
+    def save(self, outpath, delim="\t"):
+        with open(outpath, "w") as fh:
+            header = ["Instant"] + self.fields
+            print("Instant", *self.fields, sep=delim, file=fh)
+            for instant, record in sorted(self.data.items()):
+                line = [instant, ]
+                for field in self.fields:
+                    val = record.get(field, None)
+                    if val is None:
+                        val="NA"
+                    line.append(val)
+                print(*line, sep=delim, file=fh)
+
 ##########################################################################################
 #                                     Pipeline steps                                     #
 ##########################################################################################
@@ -74,4 +106,15 @@ class TeeStep(PipelineStep):
 
     def process_file(self, file):
         self.output.write(file)
+        return file
+
+
+class FileStatsStep(PipelineStep):
+    def __init__(self, recorder):
+        self.recorder = recorder
+
+    def process_file(self, file):
+        self.recorder.record(file.instant,
+                             FileName=op.basename(file.filename),
+                             FileSize=len(file.content))
         return file

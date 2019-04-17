@@ -6,20 +6,22 @@
 from ..time import *
 from ..utils import *
 from ..timestream import *
-
 from .base import PipelineStep
 
-import imageio
-import numpy as np
-import rawpy
 import datetime as dt
 import os.path as op
 import re
 import io
 
+import imageio
+import numpy as np
+import rawpy
+from PIL import Image
+
 
 class ImageIOError(Exception):
     pass
+
 
 def raiseimageio(func):
     """Decorator to raise an ImageIOError if anything goes wrong with `func`."""
@@ -65,9 +67,9 @@ class DecodeImageFileStep(PipelineStep):
         base, ext = op.splitext(file.filename)
         format = ext.lower().strip(".")
         if format in ("cr2", "nef", "rw2"):
-            with rawpy.imread(file.content) as img:
+            with rawpy.imread(io.BytesIO(file.content)) as img:
                 if self.process_raws:
-                    pixels = img.postprocess(params=self.decode_options[ext.lower()]).copy()
+                    pixels = img.postprocess(**self.decode_options[format].copy())
                 else:
                     pixels = img.raw_image.copy()
         else:
@@ -148,6 +150,11 @@ class TimestreamImage(TimestreamFile):
         :param outpath: Path of output file
         """
         imageio.imwrite(outpath, self.pixels)
+
+    @property
+    def pil(self):
+        return Image.fromarray(self.pixels)
+
 
     @classmethod
     def from_timestreamfile(cls, file, **kwargs):

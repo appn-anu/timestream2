@@ -4,6 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from pyts2 import TimeStream
+from pyts2.pipeline import *
 from pyts2.utils import CatchSignalThenExit
 import argparse as ap
 import os
@@ -42,6 +43,31 @@ def bundle(force, informat, format, bundle, input, output):
         with CatchSignalThenExit():
             output.write(image)
         click.echo(f"Processing {image}")
+
+
+@tstk_main.command()
+@click.option("--output", "-o", required=True,
+              help="Output TSV file name")
+@click.option("--threads", "-t", default=1,
+              help="Number of parallel workers")
+@click.option("--informat", "-F", default=None,
+              help="Input image format (use extension as lower case for raw formats)")
+@click.argument("input")
+def audit(output, input, threads=1, informat=None):
+    stats = ResultRecorder()
+
+    pipe = TSPipeline(
+        FileStatsStep(stats),
+        DecodeImageFileStep(),
+        ImageMeanColourStep(stats),
+        ScanQRCodesStep(stats),
+    )
+
+    input = TimeStream(input, format=informat)
+    with click.progressbar(pipe.process(input, ncpus=threads)) as progress:
+        for image in progress:
+            pass
+    stats.save(output)
 
 if __name__ == "__main__":
     tstk_main()

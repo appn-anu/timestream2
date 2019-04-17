@@ -4,9 +4,15 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from .base import (
+    ResultRecorder,
     TSPipeline,
     CopyStep,
     TeeStep,
+    FileStatsStep,
+)
+from .audit import (
+    ImageMeanColourStep,
+    ScanQRCodesStep,
 )
 from .align_time import AlignStep
 from .imageio import (

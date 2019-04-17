@@ -1,10 +1,13 @@
 from pyts2.pipeline import *
 from pyts2 import *
 from .data import *
+from .utils import *
 
+import pytest
 import numpy as np
 from PIL import Image
 from io import BytesIO
+from os import path as op
 
 class PretendTimestream(object):
     def __init__(self):
@@ -15,7 +18,16 @@ class PretendTimestream(object):
 
 
 def test_pipeline():
-    pass
+    fakeout = PretendTimestream()
+    pipe = TSPipeline()
+    pipe.add_step(TeeStep(fakeout))
+
+    files = []
+    for file in pipe(TimeStream("testdata/timestreams/flat")):
+        files.append(file)
+
+    for wegot, pretendgot in zip(files, fakeout.files):
+        assert wegot is pretendgot
 
 
 def test_encodedecodestep():
@@ -44,3 +56,14 @@ def test_encodedecodestep():
 
     for format in ("tif", "jpg", "png"):
         encode_decode_roundtrip(format)
+
+
+@pytest.mark.remote_data
+def test_decoderaw(largedata):
+    rawfile = largedata["GC37L_2019_04_11_04_00_00.cr2"]
+    tsfile = TimestreamFile.from_path(rawfile)
+    decoded_image = DecodeImageFileStep().process_file(tsfile)
+    assert isinstance(decoded_image, TimestreamImage)
+    assert decoded_image.filename == op.basename(rawfile)
+    assert decoded_image.instant == TSInstant("2019_04_11_04_00_00")
+
