@@ -5,3 +5,9 @@ iso8601
 rawpy
 datetime_truncate
 click
+zbarlight
+tqdm
+pytest
+pytest-cov
+pytest-remotedata
+pillow
