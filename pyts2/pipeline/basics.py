@@ -5,17 +5,3 @@
 
 from .base import PipelineStep
 
-
-class CopyStep(PipelineStep):
-    """Does Nothing"""
-    pass
-
-
-class TeeStep(PipelineStep):
-    """Write each image to output, without changing the image"""
-    def __init__(self, output):
-        self.output = output
-
-    def process_image(self, image):
-        self.output.write(image)
-        return image
