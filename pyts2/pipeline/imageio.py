@@ -3,8 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from pyts2.time import *
-from pyts2.utils import *
+from ..time import *
+from ..utils import *
+from ..timestream import *
 
 from .base import PipelineStep
 
@@ -29,13 +30,14 @@ def raiseimageio(func):
     return wrapped
 
 
-class DecodeImageFile(PipelineStep):
+class DecodeImageFileStep(PipelineStep):
     """Pipeline step to decode image pixels from file or bytes.
 
     Read image from file, bytes, or path
 
     :param image: An image, in any format recognised by either imageio or
-        rawpy. NB: if image is a raw image (cr2, nef, rw2), it must be supplied as a string containing a path to file (unless imageio can read it)
+        rawpy. NB: if image is a raw image (cr2, nef, rw2), it must be supplied as a
+        string containing a path to file (unless imageio can read it)
     :params raw_process_params: Parameters passed to rawpy during raw image
         prostprocessing.
     :return: Numpy array of pixel values
@@ -62,17 +64,17 @@ class DecodeImageFile(PipelineStep):
         base, ext = op.splitext(file.filename)
         format = ext.lower().strip(".")
         if format in ("cr2", "nef", "rw2"):
-            with rawpy.imread(image) as img:
+            with rawpy.imread(file.content) as img:
                 if self.process_raws:
                     pixels = img.postprocess(params=self.decode_options[ext.lower()]).copy()
                 else:
                     pixels = img.raw_image.copy()
         else:
-            pixels = imageio.imread(image)
+            pixels = imageio.imread(file.content)
         return TimestreamImage.from_timestreamfile(file, pixels=pixels)
 
-class EncodeImageFile(PipelineStep):
-    """Pipeline step to encode pixels to file."""
+class EncodeImageFileStep(PipelineStep):
+    """Pipeline step to encode pixels to a file('s bytes)."""
     default_options = {
         "jpg": {
             "format": "JPEG-PIL", # engine
@@ -90,6 +92,7 @@ class EncodeImageFile(PipelineStep):
             "format": "TIFF-PIL", # engine
         },
     }
+
     def __init__(self, format="tiff", encode_options=None):
         # Normalise format
         format = format.lower()
@@ -99,7 +102,7 @@ class EncodeImageFile(PipelineStep):
             format = "tif"
 
         if format not in self.default_options:
-            raise ValueError("invalid image format '{}'".format(format))
+            raise ValueError("Unsupported image format '{}'".format(format))
 
         self.options = self.default_options[self.format]
         if encode_options:
@@ -107,11 +110,6 @@ class EncodeImageFile(PipelineStep):
 
     @raiseimageio
     def process_file(self, file):
-        """Returns the bytes representing the image saved in `format`.
-
-        :param format: Image file format as string. See docs for imageio.imwrite(). If
-                       `format` is "verbatim", return the source file's bytes
-        """
         if not isinstance(file, TimestreamImage):
             raise TypeError("EncodeImageFile operates on TimestreamImage (not TimestreamFile)")
 
@@ -121,8 +119,6 @@ class EncodeImageFile(PipelineStep):
         # TODO: encode exif data for tiff & jpeg
         content = imageio.imwrite('<bytes>', self.pixels, **self.options)
         return TimestreamFile(content=content, filename=filename, instant=file.instant)
-
-
 
 
 class TimestreamImage(TimestreamFile):
@@ -147,6 +143,7 @@ class TimestreamImage(TimestreamFile):
             "instant": file.instant,
             "filename": file.filename,
             "fetcher": file.fetcher,
-        }.update(kwargs)
-        cls(**params)
+        }
+        params.update(kwargs)
+        return cls(**params)
 

@@ -114,6 +114,10 @@ class TSInstant(object):
     def iso8601(self):
         return self.datetime.strftime("%Y-%m-%dT%H:%M:%S")
 
+    @classmethod
+    def now(cls):
+        return cls(datetime.datetime.now())
+
     @staticmethod
     def from_path(path):
         """Extract date and index from path to timestream image

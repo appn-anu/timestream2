@@ -23,26 +23,40 @@ class TSPipeline(object):
                 break
         return file
 
-    def process_from(self, input_stream, ncpus=1):
+    def process(self, input_stream, ncpus=1):
         if ncpus > 1:
             from multiprocessing import Pool
             pool = Pool(ncpus)
-            map = pool.imap
-        yield from map(self.process_one, input_stream)
+            yield from pool.imap_unordered(self.process_file, input_stream)
+        else:
+            yield from map(self.process_file, input_stream)
+
+    def __call__(self, *args, **kwargs):
+        yield from self.process(*args, **kwargs)
 
     def process_to(self, input_stream, output, ncpus=1):
-        for done in self.process_from(input_stream, ncpus=ncpus):
+        for done in self.process(input_stream, ncpus=ncpus):
             output.write(done)
 
     def write(self, file):
-        # needed so that pipelines can be used as files
+        # TODO needed so that pipelines can be used as files
         pass
 
     def read(self, file):
-        # needed so that pipelines can be used as files
+        # TODO needed so that pipelines can be used as files
         pass
 
+##########################################################################################
+#                                     Pipeline steps                                     #
+##########################################################################################
+
+
 class PipelineStep(object):
+    """A generic base class for pipeline steps.
+
+    All pipeline steps should implement a method called `process_file` that accepts one
+    argument `file`, and returns either TimestreamFile or a subclass of it.
+    """
 
     def process_file(self, file):
         return file
