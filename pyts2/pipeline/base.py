@@ -10,6 +10,7 @@ from sys import stderr, stdout, stdin
 class TSPipeline(object):
     def __init__(self, *args):
         self.steps = args
+        self.report = ResultRecorder()
 
     def add_step(self, step):
         if not hasattr(step, "process_file"):
@@ -30,9 +31,12 @@ class TSPipeline(object):
         if ncpus > 1:
             from multiprocessing import Pool
             pool = Pool(ncpus)
-            yield from pool.imap_unordered(self.process_file, input_stream)
+            res = pool.imap_unordered(self.process_file, input_stream)
         else:
-            yield from map(self.process_file, input_stream)
+            res = map(self.process_file, input_stream)
+        for file in res:
+            self.report.record(file.instant, **file.report)
+            yield file
 
     def __call__(self, *args, **kwargs):
         yield from self.process(*args, **kwargs)
@@ -110,11 +114,7 @@ class TeeStep(PipelineStep):
 
 
 class FileStatsStep(PipelineStep):
-    def __init__(self, recorder):
-        self.recorder = recorder
-
     def process_file(self, file):
-        self.recorder.record(file.instant,
-                             FileName=op.basename(file.filename),
-                             FileSize=len(file.content))
+        file.report.update({"FileName": op.basename(file.filename),
+                            "FileSize": len(file.content)})
         return file

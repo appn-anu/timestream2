@@ -54,20 +54,24 @@ def bundle(force, informat, format, bundle, input, output):
               help="Input image format (use extension as lower case for raw formats)")
 @click.argument("input")
 def audit(output, input, threads=1, informat=None):
-    stats = ResultRecorder()
-
     pipe = TSPipeline(
-        FileStatsStep(stats),
+        FileStatsStep(),
         DecodeImageFileStep(),
-        ImageMeanColourStep(stats),
-        ScanQRCodesStep(stats),
+        ImageMeanColourStep(),
+        ScanQRCodesStep(),
     )
 
     input = TimeStream(input, format=informat)
-    with click.progressbar(pipe.process(input, ncpus=threads)) as progress:
-        for image in progress:
-            pass
-    stats.save(output)
+    for i, image in enumerate(pipe.process(input, ncpus=threads)):
+        sys.stderr.write(".")
+        sys.stderr.flush()
+        if i % 1000 == 0:
+            sys.stderr.write("S")
+            pipe.report.save(output)
+    #with click.progressbar(pipe.process(input, ncpus=threads)) as progress:
+    #    for image in progress:
+    #        pass
+    pipe.report.save(output)
 
 if __name__ == "__main__":
     tstk_main()

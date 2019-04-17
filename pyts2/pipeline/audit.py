@@ -15,25 +15,20 @@ from PIL import Image
 
 
 class ImageMeanColourStep(PipelineStep):
-    def __init__(self, recorder):
-        self.recorder = recorder
 
     def process_file(self, file):
         assert hasattr(file, "pixels")  # TODO proper check
         meancol = file.pixels.mean(axis=(0,1)).astype(int)
         if meancol.shape == ():
-            self.recorder.record(file.instant, ImageMeanValue=meancol)
+            file.report.update({"ImageMeanValue": meancol})
         elif len(meancol) == 3:
-            self.recorder.record(file.instant,
-                                 ImageMeanRed=meancol[0],
-                                 ImageMeanGreen=meancol[1],
-                                 ImageMeanBlue=meancol[1])
+            file.report.update({"ImageMeanRed": meancol[0],
+                                "ImageMeanGreen": meancol[1],
+                                "ImageMeanBlue":meancol[1]})
         return file
 
 
 class ScanQRCodesStep(PipelineStep):
-    def __init__(self, recorder):
-        self.recorder = recorder
 
     def process_file(self, file):
         assert hasattr(file, "pixels")  # TODO proper check
@@ -42,6 +37,6 @@ class ScanQRCodesStep(PipelineStep):
         codes = zbarlight.scan_codes('qrcode', image)
         if codes is not None:
             codes = ';'.join([x.decode('utf8') for x in codes])
-        self.recorder.record(file.instant, QRCodes=codes)
+        file.report.update({"QRCodes": codes})
         return file
 

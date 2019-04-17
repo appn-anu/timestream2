@@ -133,14 +133,17 @@ class EncodeImageFileStep(PipelineStep):
                 content = buf.getvalue()
         else:
             content = imageio.imwrite('<bytes>', file.pixels, **self.options)
-        return TimestreamFile(content=content, filename=filename, instant=file.instant)
+        # reinstatiate and demote to a TimestreamFile
+        return TimestreamFile(content=content, filename=filename,
+                              instant=file.instant, report=file.report)
 
 
 class TimestreamImage(TimestreamFile):
     """Image class for all timestreams"""
 
-    def __init__(self, instant=None, filename=None, fetcher=None, content=None, pixels=None, exifdata=None):
-        super().__init__(instant, filename, fetcher, content)
+    def __init__(self, instant=None, filename=None, fetcher=None, content=None,
+                 report=None, pixels=None, exifdata=None):
+        super().__init__(instant, filename, fetcher, content, report)
         self.pixels = pixels
         self.exifdata = exifdata
 
@@ -163,6 +166,7 @@ class TimestreamImage(TimestreamFile):
             "instant": file.instant,
             "filename": file.filename,
             "fetcher": file.fetcher,
+            "report": file.report,
         }
         params.update(kwargs)
         return cls(**params)
