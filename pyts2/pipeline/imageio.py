@@ -74,6 +74,7 @@ class DecodeImageFileStep(PipelineStep):
             pixels = imageio.imread(file.content)
         return TimestreamImage.from_timestreamfile(file, pixels=pixels)
 
+
 class EncodeImageFileStep(PipelineStep):
     """Pipeline step to encode pixels to a file('s bytes)."""
     default_options = {
