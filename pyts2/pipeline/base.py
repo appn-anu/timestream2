@@ -7,10 +7,16 @@ from collections import defaultdict
 from os import path as op
 from sys import stderr, stdout, stdin
 
+from tqdm import tqdm
+
+
 class TSPipeline(object):
-    def __init__(self, *args):
+    def __init__(self, *args, reporter=None):
+        self.n = 0
         self.steps = args
-        self.report = ResultRecorder()
+        if reporter is None:
+            reporter = ResultRecorder()
+        self.report = reporter
 
     def add_step(self, step):
         if not hasattr(step, "process_file"):
@@ -27,15 +33,18 @@ class TSPipeline(object):
                 break
         return file
 
-    def process(self, input_stream, ncpus=1):
+    def process(self, input_stream, ncpus=1, progress=True):
         if ncpus > 1:
             from multiprocessing import Pool
             pool = Pool(ncpus)
             res = pool.imap_unordered(self.process_file, input_stream)
         else:
             res = map(self.process_file, input_stream)
+        if progress:
+            res = tqdm(res, disable=None, unit=" files")
         for file in res:
             self.report.record(file.instant, **file.report)
+            self.n += 1
             yield file
 
     def __call__(self, *args, **kwargs):

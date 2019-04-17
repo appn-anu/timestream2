@@ -12,6 +12,7 @@ import sys
 
 import click
 from click import Choice
+from tqdm import tqdm
 
 
 @click.group()
@@ -62,15 +63,9 @@ def audit(output, input, threads=1, informat=None):
     )
 
     input = TimeStream(input, format=informat)
-    for i, image in enumerate(pipe.process(input, ncpus=threads)):
-        sys.stderr.write(".")
-        sys.stderr.flush()
-        if i % 1000 == 0:
-            sys.stderr.write("S")
+    for image in pipe.process(input, ncpus=threads):
+        if pipe.n % 1000 == 0:
             pipe.report.save(output)
-    #with click.progressbar(pipe.process(input, ncpus=threads)) as progress:
-    #    for image in progress:
-    #        pass
     pipe.report.save(output)
 
 if __name__ == "__main__":
