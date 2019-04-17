@@ -93,7 +93,7 @@ class TimestreamFile(object):
             raise ValueError("TimestreamFile must have an instant")
         if self.filename is None:
             raise ValueError("TimestreamFile must have a filename")
-        if self._content is None and self.fetcher is None:
+        if self.__class__ is TimestreamFile and self._content is None and self.fetcher is None:
             raise ValueError("TimestreamFile must have content (directly or via a fetcher)")
 
     @property

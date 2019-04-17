@@ -16,12 +16,13 @@ class PretendTimestream(object):
 
 def test_encodedecodestep():
     def encode_decode_roundtrip(format):
-        pixels = np.array([[[255,255,255], [0, 0, 0]]], dtype="u1"),
+        print(format)
+        pixels = np.array([[[255,255,255], [0, 0, 0]]], dtype="u1")
         instant = TSInstant.now()
         filename = "pretend.file"
         orig_image = TimestreamImage(instant=instant, pixels=pixels, filename=filename)
 
-        encoded_image = EncodeImageFileStep().process_file(orig_image)
+        encoded_image = EncodeImageFileStep(format=format).process_file(orig_image)
 
         assert isinstance(encoded_image, TimestreamFile)
         assert encoded_image.filename == f"pretend.{format}"

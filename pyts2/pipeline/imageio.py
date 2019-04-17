@@ -15,7 +15,8 @@ import rawpy
 import datetime as dt
 import os.path as op
 import re
-from PIL import Image
+import io
+
 
 class ImageIOError(Exception):
     pass
@@ -78,18 +79,19 @@ class EncodeImageFileStep(PipelineStep):
     default_options = {
         "jpg": {
             "format": "JPEG-PIL", # engine
-            "pilmode": "RGB",
             "quality": 95,
             "progressive": True,
-            "optimise": True,
+            "optimize": True,
             "subsampling": "4:4:4",
         },
         "tif": {
-            "format": "TIFF-PIL", # engine
+            # These are arugments to PIL's image.save. See note below in process_file
+            "format": "TIFF",
             "compression": "tiff_lzw"
         },
         "png": {
-            "format": "TIFF-PIL", # engine
+            "format": "PNG", # engine
+            "optimize": True,
         },
     }
 
@@ -103,8 +105,9 @@ class EncodeImageFileStep(PipelineStep):
 
         if format not in self.default_options:
             raise ValueError("Unsupported image format '{}'".format(format))
+        self.format = format
 
-        self.options = self.default_options[self.format]
+        self.options = self.default_options[self.format].copy()
         if encode_options:
             self.options.update(encode_options)
 
@@ -113,11 +116,20 @@ class EncodeImageFileStep(PipelineStep):
         if not isinstance(file, TimestreamImage):
             raise TypeError("EncodeImageFile operates on TimestreamImage (not TimestreamFile)")
 
-        base, ext = op.splitext(self.filename)
+        base, ext = op.splitext(file.filename)
         filename = f"{base}.{self.format}"
 
         # TODO: encode exif data for tiff & jpeg
-        content = imageio.imwrite('<bytes>', self.pixels, **self.options)
+        if self.format == "tif":
+            # So tiffs are a bit broken in imageio at the moment. Therefore we need some
+            # manual hackery with PIL
+            from PIL import Image
+            pimg = Image.fromarray(file.pixels)
+            with io.BytesIO() as buf:
+                pimg.save(buf, **self.options)
+                content = buf.getvalue()
+        else:
+            content = imageio.imwrite('<bytes>', file.pixels, **self.options)
         return TimestreamFile(content=content, filename=filename, instant=file.instant)
 
 
