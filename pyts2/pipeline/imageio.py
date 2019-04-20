@@ -33,7 +33,6 @@ def raiseimageio(func):
             raise ImageIOError("Failed to read image:\n" + str(err)) from err
     return wrapped
 
-
 class DecodeImageFileStep(PipelineStep):
     """Pipeline step to decode image pixels from file or bytes.
 

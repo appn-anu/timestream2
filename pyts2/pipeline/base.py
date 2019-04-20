@@ -6,6 +6,7 @@
 from collections import defaultdict
 from os import path as op
 from sys import stderr, stdout, stdin
+import warnings
 
 from tqdm import tqdm
 
@@ -28,9 +29,12 @@ class TSPipeline(object):
         # This should mirror PipelineStep, so an entire pipeline can function
         # as a pipeline step
         for step in self.steps:
-            file = step.process_file(file)
-            if file is None:
-                break
+            try:
+                file = step.process_file(file)
+            except Exception as exc:
+                warnings.warn(f"pipeline failed at {step.__class__.__name__}: {str(exc)}")
+                file.report["Errors"] = str(exc)
+                return file
         return file
 
     def process(self, input_stream, ncpus=1, progress=True):
@@ -43,6 +47,8 @@ class TSPipeline(object):
         if progress:
             res = tqdm(res, disable=None, unit=" files")
         for file in res:
+            if file is None:
+                continue
             self.report.record(file.instant, **file.report)
             self.n += 1
             yield file
@@ -79,6 +85,9 @@ class ResultRecorder(object):
             self.data[repr(instant)].update(kwargs.copy())
 
     def save(self, outpath, delim="\t"):
+        if len(self.data) < 1:
+            # No data, don't make file
+            return
         with open(outpath, "w") as fh:
             header = ["Instant"] + self.fields
             print("Instant", *self.fields, sep=delim, file=fh)
@@ -86,6 +95,9 @@ class ResultRecorder(object):
                 line = [instant, ]
                 for field in self.fields:
                     val = record.get(field, None)
+                    if isinstance(val, str):
+                        val = val.replace("\n", " ").replace("\t", " ")
+                        val = f'"{val}"'
                     if val is None:
                         val="NA"
                     line.append(val)
