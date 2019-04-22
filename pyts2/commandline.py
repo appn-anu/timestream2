@@ -62,13 +62,14 @@ def audit(output, input, threads=1, informat=None):
         ScanQRCodesStep(),
     )
 
-    input = TimeStream(input, format=informat)
+    ints = TimeStream(input, format=informat)
     try:
-        for image in pipe.process(input, ncpus=threads):
+        for image in pipe.process(ints, ncpus=threads):
             if pipe.n % 1000 == 0:
                 pipe.report.save(output)
     finally:
         pipe.report.save(output)
+        click.echo(f"Audited {input}:{informat}, found {pipe.n} files")
 
 if __name__ == "__main__":
     tstk_main()
