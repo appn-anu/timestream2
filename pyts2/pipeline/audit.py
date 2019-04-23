@@ -18,6 +18,7 @@ import skimage as ski
 class ImageMeanColourException(Exception):
     pass
 
+
 class ImageMeanColourStep(PipelineStep):
 
     def process_file(self, file):
@@ -34,11 +35,12 @@ class ImageMeanColourStep(PipelineStep):
 
             # Hack: dont' calculate the whole L*a*b matrix, just Lab-ify the
             # precomputed mean value. I think this is the same???
-            #meanlab = file.Lab.mean(axis=(0,1))
-            meanlab = ski.color.rgb2lab(meanrgb[np.newaxis,np.newaxis,:])
-            file.report.update({"ImageMean_L": meanlab[0,0,0],
-                                "ImageMean_a": meanlab[0,0,1],
-                                "ImageMean_b":meanlab[0,0,2]})
+            #meanlab = file.Lab.mean(axis=(0,1))  # this uses even more RAM
+            meanimg = meanrgb[np.newaxis,np.newaxis,:]  # extra pretend axes for skimage
+            meanlab = ski.color.rgb2lab(meanimg).mean(axis=(0,1))
+            file.report.update({"ImageMean_L": meanlab[0],
+                                "ImageMean_a": meanlab[1],
+                                "ImageMean_b":meanlab[2]})
         else:
             raise ImageMeanColourException("Invalid pixel matrix shape")
         return file
@@ -48,9 +50,7 @@ class ScanQRCodesStep(PipelineStep):
 
     def process_file(self, file):
         assert hasattr(file, "pixels")  # TODO proper check
-
-        image = file.pil
-        codes = zbarlight.scan_codes('qrcode', image)
+        codes = zbarlight.scan_codes('qrcode', file.pil)
         if codes is not None:
             codes = ';'.join(sorted(x.decode('utf8') for x in codes))
         file.report.update({"QRCodes": codes})
