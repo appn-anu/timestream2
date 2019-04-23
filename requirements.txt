@@ -11,3 +11,4 @@ pytest
 pytest-cov
 pytest-remotedata
 pillow
+scikit-image
