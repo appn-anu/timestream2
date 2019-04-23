@@ -5,6 +5,6 @@ python:
 before_install:
   - sudo apt-get install -y libraw-dev libzbar-dev
 install:
-  - pip install -U -r requirements.txt
+  - pip install -U -r .test-requirements.txt
 script:
   - pytest

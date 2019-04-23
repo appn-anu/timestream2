@@ -1,0 +1,15 @@
+numpy
+flask
+imageio
+msgpack-python
+iso8601
+click
+zbarlight
+pytest
+pytest-cov
+pytest-remotedata
+requests
+scikit-image
+rawpy
+tqdm
+datetime_truncate
