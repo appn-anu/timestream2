@@ -12,19 +12,35 @@ from .imageio import *
 import numpy as np
 import zbarlight
 from PIL import Image
+import skimage as ski
 
+
+class ImageMeanColourException(Exception):
+    pass
 
 class ImageMeanColourStep(PipelineStep):
 
     def process_file(self, file):
         assert hasattr(file, "pixels")  # TODO proper check
-        meancol = file.pixels.mean(axis=(0,1)).astype(int)
-        if meancol.shape == ():
-            file.report.update({"ImageMeanValue": meancol})
-        elif len(meancol) == 3:
-            file.report.update({"ImageMeanRed": meancol[0],
-                                "ImageMeanGreen": meancol[1],
-                                "ImageMeanBlue":meancol[1]})
+        pix = file.pixels01
+        if len(pix.shape) == 2:  # Greyscale
+            meancol = pix.mean()
+            file.report.update({"ImageMean_Grey": meancol})
+        elif len(pix.shape) == 3:  # Colour
+            meanrgb = pix.mean(axis=(0,1))
+            file.report.update({"ImageMean_Red": meanrgb[0],
+                                "ImageMean_Green": meanrgb[1],
+                                "ImageMean_Blue":meanrgb[2]})
+
+            # Hack: dont' calculate the whole L*a*b matrix, just Lab-ify the
+            # precomputed mean value. I think this is the same???
+            #meanlab = file.Lab.mean(axis=(0,1))
+            meanlab = ski.color.rgb2lab(meanrgb[np.newaxis,np.newaxis,:])
+            file.report.update({"ImageMean_L": meanlab[0,0,0],
+                                "ImageMean_a": meanlab[0,0,1],
+                                "ImageMean_b":meanlab[0,0,2]})
+        else:
+            raise ImageMeanColourException("Invalid pixel matrix shape")
         return file
 
 
@@ -36,7 +52,7 @@ class ScanQRCodesStep(PipelineStep):
         image = file.pil
         codes = zbarlight.scan_codes('qrcode', image)
         if codes is not None:
-            codes = ';'.join([x.decode('utf8') for x in codes])
+            codes = ';'.join(sorted(x.decode('utf8') for x in codes))
         file.report.update({"QRCodes": codes})
         return file
 

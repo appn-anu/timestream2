@@ -10,6 +10,7 @@ dependencies:
   - iso8601
   - click
   - zbarlight
+  - scikit-image
   - pip:
     - rawpy
     - tqdm

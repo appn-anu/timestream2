@@ -11,8 +11,10 @@ dependencies:
   - click
   - zbarlight
   - pytest
+  - pytest-cov
   - pytest-remotedata
   - requests
+  - scikit-image
   - pip:
     - rawpy
     - tqdm

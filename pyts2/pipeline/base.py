@@ -7,14 +7,23 @@ from collections import defaultdict
 from os import path as op
 from sys import stderr, stdout, stdin
 import warnings
+import csv
 
 from tqdm import tqdm
+
+csv.register_dialect('tsv',
+                     delimiter='\t',
+                     doublequote=False,
+                     escapechar='\\',
+                     lineterminator='\n',
+                     quotechar='"',
+                     quoting=csv.QUOTE_NONNUMERIC)
 
 
 class TSPipeline(object):
     def __init__(self, *args, reporter=None):
         self.n = 0
-        self.steps = args
+        self.steps = list(args)
         if reporter is None:
             reporter = ResultRecorder()
         self.report = reporter
@@ -69,9 +78,6 @@ class TSPipeline(object):
         pass
 
 
-
-
-
 class ResultRecorder(object):
 
     def __init__(self):
@@ -89,19 +95,17 @@ class ResultRecorder(object):
             # No data, don't make file
             return
         with open(outpath, "w") as fh:
-            header = ["Instant"] + self.fields
-            print("Instant", *self.fields, sep=delim, file=fh)
+            tsvw = csv.writer(fh, dialect='tsv')
+            tsvw.writerow(["Instant"] + self.fields)
             for instant, record in sorted(self.data.items()):
                 line = [instant, ]
                 for field in self.fields:
                     val = record.get(field, None)
-                    if isinstance(val, str):
-                        val = val.replace("\n", " ").replace("\t", " ")
-                        val = f'"{val}"'
                     if val is None:
                         val="NA"
                     line.append(val)
-                print(*line, sep=delim, file=fh)
+                tsvw.writerow(line)
+
 
 ##########################################################################################
 #                                     Pipeline steps                                     #

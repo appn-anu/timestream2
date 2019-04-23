@@ -67,3 +67,18 @@ def test_decoderaw(largedata):
     assert decoded_image.filename == op.basename(rawfile)
     assert decoded_image.instant == TSInstant("2019_04_11_04_00_00")
 
+
+
+def test_imagepixels():
+    pixels = np.array([[[255,255,255], [0, 0, 0]]], dtype="u1")
+    instant = TSInstant.now()
+    image = TimestreamImage(instant=instant, pixels=pixels,
+                           filename="pretend.file")
+
+    assert np.array_equal(image.pixels, pixels)
+    assert np.array_equal(image.rgb, pixels)
+    Lab = np.array([[[100, 0, 0], [0, 0, 0]]])
+    assert np.allclose(image.Lab, Lab, atol=0.01)  # the LAB above is rounded
+    assert np.array_equal(image.pixels01, pixels/255.0)
+
+

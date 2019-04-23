@@ -17,6 +17,7 @@ import sys
 import imageio
 import numpy as np
 import rawpy
+import skimage as ski
 from PIL import Image
 
 
@@ -30,7 +31,7 @@ def raiseimageio(func):
         try:
             return func(*args, **kwargs)
         except Exception as err:
-            raise ImageIOError("Failed to read image:\n" + str(err)) from err
+            raise ImageIOError("Failed to read image: " + str(err)) from err
     return wrapped
 
 class DecodeImageFileStep(PipelineStep):
@@ -153,6 +154,18 @@ class TimestreamImage(TimestreamFile):
         :param outpath: Path of output file
         """
         imageio.imwrite(outpath, self.pixels)
+
+    @property
+    def rgb(self):
+        return self.pixels
+
+    @property
+    def Lab(self):
+        return ski.color.rgb2lab(self.pixels)
+
+    @property
+    def pixels01(self):
+        return self.pixels.astype(np.float64) / np.iinfo(self.pixels.dtype).max
 
     @property
     def pil(self):
