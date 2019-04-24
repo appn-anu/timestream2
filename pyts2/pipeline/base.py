@@ -8,6 +8,7 @@ from os import path as op
 from sys import stderr, stdout, stdin
 import warnings
 import csv
+import re
 
 from tqdm import tqdm
 
@@ -103,6 +104,8 @@ class ResultRecorder(object):
                     val = record.get(field, None)
                     if val is None:
                         val="NA"
+                    if isinstance(val, str):
+                        val = re.sub(r"\s+", " ", val, re.IGNORECASE | re.MULTILINE)
                     line.append(val)
                 tsvw.writerow(line)
 
