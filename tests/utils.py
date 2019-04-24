@@ -3,6 +3,7 @@ import os
 import os.path as op
 import zipfile
 from io import BytesIO
+import json
 
 import pytest
 import requests
@@ -25,7 +26,9 @@ def wget(url, directory):
 @pytest.fixture
 def largedata(request):
     datadir = "testdata/large/"
-    if request.config.cache.get("large_testdata", None) is None:
+    r = requests.get("https://api.github.com/repos/appf-anu/large_testdata/commits/master")
+    latest_sha = json.loads(r.content)["sha"]
+    if request.config.cache.get("large_testdata_sha", "NONE") != latest_sha:
         with requests.get("https://github.com/appf-anu/large_testdata/archive/master.zip") as r:
             with zipfile.ZipFile(BytesIO(r.content)) as zip:
                 zip.extractall(datadir)

@@ -34,6 +34,7 @@ def raiseimageio(func):
             raise ImageIOError("Failed to read image: " + str(err)) from err
     return wrapped
 
+
 class DecodeImageFileStep(PipelineStep):
     """Pipeline step to decode image pixels from file or bytes.
 
@@ -127,10 +128,8 @@ class EncodeImageFileStep(PipelineStep):
         if self.format == "tif":
             # So tiffs are a bit broken in imageio at the moment. Therefore we need some
             # manual hackery with PIL
-            from PIL import Image
-            pimg = Image.fromarray(file.pixels)
             with io.BytesIO() as buf:
-                pimg.save(buf, **self.options)
+                file.pil.save(buf, **self.options)
                 content = buf.getvalue()
         else:
             content = imageio.imwrite('<bytes>', file.pixels, **self.options)
@@ -175,6 +174,10 @@ class TimestreamImage(TimestreamFile):
             pix = (self.pixels / 256.0).astype(np.uint8)
             return Image.fromarray(pix)
 
+    @staticmethod
+    def from_path(path):
+        file = TimestreamFile.from_path(path)
+        return DecodeImageFileStep().process_file(file)
 
     @classmethod
     def from_timestreamfile(cls, file, **kwargs):
@@ -187,4 +190,3 @@ class TimestreamImage(TimestreamFile):
         }
         params.update(kwargs)
         return cls(**params)
-

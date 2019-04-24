@@ -11,7 +11,6 @@ from .imageio import *
 
 import numpy as np
 import zbarlight
-from PIL import Image
 import skimage as ski
 
 

@@ -3,18 +3,19 @@ channels:
   - conda-forge
 dependencies:
   - python=3.*
-  - numpy
+  - click
   - flask
   - imageio
-  - msgpack-python
   - iso8601
-  - click
-  - zbarlight
+  - msgpack-python
+  - numpy
   - pytest
   - pytest-cov
   - pytest-remotedata
   - requests
   - scikit-image
+  - zbarlight
+  - pip
   - pip:
     - rawpy
     - tqdm

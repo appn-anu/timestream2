@@ -14,6 +14,9 @@ from .audit import (
     ImageMeanColourStep,
     ScanQRCodesStep,
 )
+from .resize import (
+    ResizeImageStep,
+)
 from .align_time import AlignStep
 from .imageio import (
     TimestreamImage,

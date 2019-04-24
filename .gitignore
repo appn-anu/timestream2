@@ -1,4 +1,5 @@
 testdata/large/
+.pytest_cache/
 # Prerequisites
 *.d
 

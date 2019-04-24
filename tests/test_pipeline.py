@@ -9,6 +9,7 @@ from PIL import Image
 from io import BytesIO
 from os import path as op
 
+
 class PretendTimestream(object):
     def __init__(self):
         self.files = []
@@ -82,3 +83,13 @@ def test_imagepixels():
     assert np.array_equal(image.pixels01, pixels/255.0)
 
 
+def test_resize():
+    img = TimestreamImage.from_path("testdata/images/GC37L~320_2019_04_01_00_00_00.jpg")
+    orows, ocols, odepth = img.pixels.shape
+    print(img.pixels.shape)
+
+    downsized = ResizeImageStep(cols=100).process_file(img)
+    rows, cols, depth = downsized.pixels.shape
+    assert cols == 100
+    assert depth == odepth
+    assert rows < orows
