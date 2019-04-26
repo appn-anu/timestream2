@@ -31,7 +31,7 @@ class ResizeImageStep(PipelineStep):
                 rows = orows * (cols / ocols)
             elif cols is None:
                 cols = ocols * (rows / orows)
-            newpixels = ski.transform.resize(file.pixels, np.round((cols, rows)),
+            newpixels = ski.transform.resize(file.pixels, np.round((rows, cols)),
                                              order=3, anti_aliasing=True)
         return TimestreamImage.from_timestreamfile(file, pixels=newpixels)
 
