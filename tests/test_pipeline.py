@@ -86,7 +86,6 @@ def test_imagepixels():
 def test_resize():
     img = TimestreamImage.from_path("testdata/images/GC37L~320_2019_04_01_00_00_00.jpg")
     orows, ocols, odepth = img.pixels.shape
-    print(img.pixels.shape)
 
     downsized = ResizeImageStep(cols=100).process_file(img)
     rows, cols, depth = downsized.pixels.shape
