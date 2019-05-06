@@ -21,7 +21,6 @@ def nowarnings(func):
     return wrapped
 
 
-
 def find_files(base):
     if os.path.exists(base) and os.path.isfile(base):
         yield base

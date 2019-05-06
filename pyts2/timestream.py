@@ -4,8 +4,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from pyts2.time import *
-from pyts2.imageio import *
 from pyts2.utils import *
+
 
 import datetime as dt
 import io
@@ -15,6 +15,8 @@ import re
 import tarfile
 import warnings
 import zipfile
+from pathlib import Path
+import hashlib
 
 
 def path_is_timestream_file(path, extensions=None):
@@ -39,7 +41,7 @@ def path_is_timestream_file(path, extensions=None):
     if isinstance(extensions, str):
         extensions = [extensions, ]
     try:
-        m = TS_IMAGE_DATETIME_RE.search(path)
+        m = TS_DATETIME_RE.search(path)
         if m is None:
             return False
         if extensions is not None:
@@ -49,48 +51,109 @@ def path_is_timestream_file(path, extensions=None):
         return False
 
 
-def extract_datetime(path):
-    m = TS_IMAGE_DATETIME_RE.search(path)
-    if m is None:
-        return path
-    else:
-        return m[0]
+class ZipContentFetcher(object):
+    def __init__(self, zipfile, pathinzip):
+        self.zipfile = zipfile
+        self.pathinzip = pathinzip
+
+    def get(self):
+        with zipfile.ZipFile(str(self.zipfile)) as zfh:
+            return zfh.read(self.pathinzip)
+
+class TarContentFetcher(object):
+    def __init__(self, tarfile, pathintar):
+        self.tarfile = tarfile
+        self.pathintar = pathintar
+
+    def get(self):
+        with tarfile.TarFile(self.tarfile) as tfh:
+            return tar.extractfile(self.pathintar).read()
 
 
-def _get_image(path=None, zip=None, tar=None, entry=None):
-    """Callback to be used with TSv1Stream.iter(), such that TSImages are itered."""
-    if path is not None:
-        return TSImage(path=path)
-    elif zip is not None and entry is not None:
-        return TSImage(image=zip.read(entry), filename=entry.filename)
-    elif tar is not None and entry is not None:
-        return TSImage(image=tar.extractfile(entry).read(), filename=entry.name)
-    else:
-        raise ValueError("Bad arguments to _get_image")
+class FileContentFetcher(object):
+    def __init__(self, path):
+        self.path = Path(path)
+
+    def get(self):
+        with open(self.path, "rb") as fh:
+            return fh.read()
 
 
-def _get_datetime(path=None, zip=None, tar=None, entry=None):
-    """Callback to be used with TSv1Stream.iter(), such that datetimes are itered."""
-    if zip is not None and entry is not None:
-        path = entry.filename
-    elif tar is not None and entry is not None:
-        path = entry.name
-    if path is not None:
-        return TSInstant.from_path(path)
-    else:
-        raise ValueError("Bad arguments to _get_image")
+
+class TimestreamFile(object):
+    '''A container class for files in timestreams'''
+    def __init__(self, instant=None, filename=None, fetcher=None, content=None, report=None):
+        self.instant = instant
+        self.filename = filename
+        self.fetcher = fetcher
+        self._content = content
+        # a report from various pipeline components on this file
+        if report is None:
+            report = dict()
+        self.report = report
+        if self.instant is None and self.filename is not None:
+            self.instant = TSInstant.from_path(self.filename)
+        if self.instant is None:
+            raise ValueError("TimestreamFile must have an instant")
+        if self.filename is None:
+            raise ValueError("TimestreamFile must have a filename")
+        if self.__class__ is TimestreamFile and self._content is None and self.fetcher is None:
+            raise ValueError("TimestreamFile must have content (directly or via a fetcher)")
+
+    @property
+    def content(self):
+        if self._content is None and self.fetcher is not None:
+            self._content = self.fetcher.get()
+        return self._content
+
+    # TODO: work out where this should go. be careful, as setting here should sync to
+    # disc perhaps?
+    #@content.setter
+    #def _set_content(self, content):
+    #    self._content = content
+
+    @classmethod
+    def from_path(cls, path, instant=None):
+        if instant is None:
+            instant = TSInstant.from_path(path)
+        return cls(fetcher=FileContentFetcher(path),
+                   filename=op.basename(path),
+                   instant=instant)
+
+    @classmethod
+    def from_bytes(cls, filebytes, filename, instant=None):
+        if not isinstance(filebytes, bytes):
+            raise ValueError("from_bytes must be given file contents as bytes")
+        if instant is None:
+            instant = TSInstant.from_path(filename)
+        return cls(content=filebytes, filename=filename, instant=instant)
+
+    def isodate(self):
+        """convenience helper to get iso8601 string"""
+        return self.instant.isodate("%Y-%m-%dT%H:%M:%S")
+
+    def __len__(self):
+        return len(self.content)
+
+    def checksum(self, algorithm="md5"):
+        hasher = hashlib.new(algorithm)
+        hasher.update(self.content)
+        return hasher.hexdigest()
+
+    def __repr__(self):
+        return self.filename
 
 
 class TimeStream(object):
     bundle_levels = ("root", "year", "month", "day", "hour", "none")
 
-    def __init__(self, path=None, mode="r", format=None, onerror="warn",
-                 raw_process_params=None, bundle_level="none", name=None):
+    def __init__(self, path=None, format=None, onerror="warn",
+                 bundle_level="none", name=None):
         """path is the base directory of a timestream"""
+        self._files = set() # TODO: add each new entry encountered
         self.name = name
         self.path = None
         self.format = None
-        self.rawparams = raw_process_params
         self.sorted = True
         if bundle_level not in self.bundle_levels:
             raise ValueError("invalid bundle level %s",  bundle_level)
@@ -100,9 +163,9 @@ class TimeStream(object):
         else:
             raise ValueError("onerror should be one of raise, skip, or warn")
         if path is not None:
-            self.open(path, mode, format=format)
+            self.open(path, format=format)
 
-    def open(self, path, mode="r", format=None):
+    def open(self, path, format=None):
         if self.name is None:
             self.name = op.splitext(op.basename(path))[0]
         if format is not None:
@@ -110,11 +173,11 @@ class TimeStream(object):
         self.format = format
         self.path = path
 
+    @property
+    def instants(self):
+        return list(sorted(f.instant for f in self.iter(tar_contents=False)))
 
-    def iter_instants(self):
-        yield from self.iter(callback=_get_datetime)
-
-    def iter(self, callback=_get_image):
+    def iter(self, tar_contents=True):
         def walk_archive(path):
             if zipfile.is_zipfile(str(path)):
                 with zipfile.ZipFile(str(path)) as zip:
@@ -125,16 +188,22 @@ class TimeStream(object):
                         if entry.is_dir():
                             continue
                         if path_is_timestream_file(entry.filename, extensions=self.format):
-                            yield callback(zip=zip, entry=entry)
+                            yield TimestreamFile(filename=entry.filename,
+                                                 fetcher=ZipContentFetcher(path, entry.filename))
             elif tarfile.is_tarfile(path):
                 self.sorted = False
-                warnings.warn("Extracting images from a tar file. Sorted iteration is not guaranteed")
+                warnings.warn("Extracting files from a tar file. Sorted iteration is not guaranteed")
                 with tarfile.TarFile(path) as tar:
                     for entry in tar:
                         if not entry.isfile():
                             continue
                         if path_is_timestream_file(entry.name, extensions=self.format):
-                            yield callback(tar=tar, entry=entry)
+                            filebytes = tar.extractfile(entry).read()
+                            if tar_contents:
+                                yield TimestreamFile.from_bytes(filebytes, filename=entry.name)
+                            else:
+                                yield TimestreamFile(filename=entry.name,
+                                                     fetcher=TarContentFetcher(path, entry.name))
             else: raise ValueError(f"'{path}' appears not to be an archive")
 
         def is_archive(path):
@@ -153,26 +222,24 @@ class TimeStream(object):
                 if is_archive(path):
                     yield from walk_archive(path)
                 if path_is_timestream_file(path, extensions=self.format):
-                    yield callback(path=path)
+                    yield TimestreamFile.from_path(path)
 
 
-    def _timestream_path(self, image):
-        """Gets path for timestream image.
+    def _timestream_path(self, instant):
+        """Gets path for timestream file.
         """
         idxstr = ""
-        inst = image.instant
-        if inst.index is not None:
-            idxstr = "_" + str(inst.index)
+        if instant.index is not None:
+            idxstr = "_" + str(instant.index)
         path = "%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{subsec:02d}{idx}.{ext}"
-        path = inst.datetime.strftime(path)
-        path = path.format(name=self.name, subsec=inst.subsecond,
+        path = instant.datetime.strftime(path)
+        path = path.format(name=self.name, subsec=instant.subsecond,
                            idx=idxstr, ext=self.format)
         return path
 
-    def _bundle_archive_path(self, image):
+    def _bundle_archive_path(self, instant):
         if self.bundle == "none":
             return None
-
         if self.bundle == "root":
             return self.path
         elif self.bundle == "year":
@@ -187,28 +254,30 @@ class TimeStream(object):
             bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M.zip"
         elif self.bundle == "second":
             bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M_%S.zip"
-        return image.instant.datetime.strftime(bpath)
+        return instant.datetime.strftime(bpath)
 
-    def write(self, image):
+    def write(self, file):
         if self.name is None or self.format is None:
             raise RuntimeError("TSv2Stream not opened")
-        if not isinstance(image, TSImage):
-            raise TypeError("image should be a TSImage")
-        subpath = self._timestream_path(image)
+        if not isinstance(file, TimestreamFile):
+            raise TypeError("file should be a TimestreamFile")
+        subpath = self._timestream_path(file.instant)
         if self.bundle == "none":
             outpath = op.join(self.path, subpath)
             os.makedirs(op.dirname(outpath), exist_ok=True)
-            image.save(outpath)
+            # TODO this logic should probably live in TSfile
+            with open(outpath, 'wb') as fh:
+                fh.write(file.content)
         else:
-            bundle = self._bundle_archive_path(image)
+            bundle = self._bundle_archive_path(file.instant)
             os.makedirs(op.dirname(bundle), exist_ok=True)
+            # TODO this logic should probably live in TSfile
             with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
                                  allowZip64=True) as zip:
-                zip.writestr(op.join(self.name, subpath),
-                             image.as_bytes(format=self.format))
+                zip.writestr(op.join(self.name, subpath), file.content)
 
     def __iter__(self):
-        return self.iter(callback=_get_image)
+        return self.iter()
 
     def close(self):
         pass

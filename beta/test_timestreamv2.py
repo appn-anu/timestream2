@@ -30,5 +30,4 @@ def test_roundtrip_v1_to_v2(tmpdir):
             assert image.instant.datetime in SMALL_TIMESTREAMS["expect_times"]
             assert image.instant.subsecond == 0
             assert image.instant.index is None
-        assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
 

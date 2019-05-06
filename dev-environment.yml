@@ -1,4 +1,4 @@
-name: pyts2
+name: pyts2-dev
 channels:
   - conda-forge
 dependencies:
@@ -9,8 +9,11 @@ dependencies:
   - iso8601
   - msgpack-python
   - numpy
+  - pytest
+  - pytest-cov
+  - pytest-remotedata
+  - requests
   - scikit-image
-  - tqdm
   - zbarlight
   - pip
   - pip:

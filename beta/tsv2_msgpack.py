@@ -3,7 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from pyts2.imageio import *
+from pyts2.timestream import *
 import datetime as dt
 import os
 
@@ -42,31 +42,19 @@ class TSv2Stream(object):
         msgdict = next(self.unpacker)
         datestr = msgdict[b"datetime"].decode('ascii')
         imgbytes = msgdict[b"image"]
-        return TSImage(image=imgbytes, datetime=datestr)
+        filename = msgdict[b"filename"].decode("utf8")
+        return TimestreamFile(content=imgbytes, instant=TSInstant(datestr), filename=filename)
 
     def write(self, image):
         if self.fh is None or self.fh.closed:
             raise RuntimeError("TSv2Stream not opened")
-        if not isinstance(image, TSImage):
-            raise TypeError("image should be a TSImage")
+        if not isinstance(image, TimestreamFile):
+            raise TypeError("image should be a TimestreamFile")
         date_enc = image.instant.datetime.strftime(self.DATE_FORMAT).encode("ascii")
-        image_enc = image.as_bytes()
-        msgdict = {b"datetime": date_enc,
-                   b"image": image_enc}
+        filename = image.filename.encode("utf8")
+        msgdict = {b"datetime": date_enc, b"image": image.content, b'filename': filename}
         self.fh.write(self.packer.pack(msgdict))
 
-    def write_verbaitm(self, bytesorpath, datetime):
-        if self.fh is None or self.fh.closed:
-            raise RuntimeError("TSv2Stream not opened")
-        if isinstance(datetime, str):
-            datetime = parse_date(datetime)
-        if not isinstance(bytesorpath, bytes):
-            with open(bytesorpath, "rb") as fh:
-                bytesorpath = fh.read()
-        date_enc = datetime.strftime(self.DATE_FORMAT).encode("ascii")
-        msgdict = {b"datetime": date_enc,
-                   b"image": bytesorpath}
-        self.fh.write(self.packer.pack(msgdict))
 
     def __iter__(self):
         return self

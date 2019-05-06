@@ -1,10 +1,9 @@
-from pyts2.time import *
 from pyts2.timestream import TimeStream
+from pyts2.time import *
 from pyts2.utils import find_files
 
 from .data import *
 
-import numpy as np
 import datetime as dt
 
 def test_read():
@@ -20,49 +19,33 @@ def test_read():
         "testdata/timestreams/zipball-day",
     ]
 
+    expect_insts = [TSInstant(t, subsecond=0, index=None)
+                    for t in SMALL_TIMESTREAMS["expect_times"]]
     for timestream in timestreams:
         stream = TimeStream(timestream)
-        for i, image in enumerate(stream):
+        for i, file in enumerate(stream):
             assert stream.sorted == ('tar' not in timestream)
-            assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
-            # Instant
-            expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
-                                    subsecond=0, index=None)
-            assert isinstance(image.instant, TSInstant)
+            assert isinstance(file.instant, TSInstant)
             if stream.sorted:
-                assert image.instant == expect_inst
-            else:
-                assert image.instant.datetime in SMALL_TIMESTREAMS["expect_times"]
+                assert file.instant == expect_insts[i]
 
-        stream = TimeStream(timestream)
-        for i, inst in enumerate(stream.iter_instants()):
-            assert isinstance(inst, TSInstant)
-            expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
-                                    subsecond=0, index=None)
-            if stream.sorted:
-                assert inst == expect_inst
-            else:
-                assert image.instant.datetime in SMALL_TIMESTREAMS["expect_times"]
-                assert inst.subsecond == 0
-                assert inst.index is None
+        assert stream.instants == expect_insts
 
 
 def test_gvlike():
-    for i, image in enumerate(TimeStream("testdata/timestreams/gvlike")):
+    for i, file in enumerate(TimeStream("testdata/timestreams/gvlike")):
         expect_inst = TSInstant(GVLIKE_TIMESTREAM["expect_datetime"],
                                 GVLIKE_TIMESTREAM["expect_subsecond"],
                                 GVLIKE_TIMESTREAM["expect_indices"][i])
-        assert image.instant == expect_inst
-        assert np.array_equal(image.pixels, GVLIKE_TIMESTREAM["expect_pixels"])
+        assert file.instant == expect_inst
 
 
 def test_zipout(tmpdir):
     def check_output_ok(outpath):
-        for i, image in enumerate(TimeStream(outpath)):
+        for i, file in enumerate(TimeStream(outpath)):
             expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
                                     subsecond=0, index=None)
-            assert image.instant == expect_inst
-            assert np.array_equal(image.pixels, SMALL_TIMESTREAMS["expect_pixels"])
+            assert file.instant == expect_inst
 
     outputs = {
         "root":  [
@@ -108,10 +91,9 @@ def test_zipout(tmpdir):
         outpath = tmpdir.join(level, "output")
         if level == "root":
             outpath += ".zip"
-        out = TimeStream(path=outpath, mode="w", format="tif",
-                         bundle_level=level, name="output")
-        for image in TimeStream("testdata/timestreams/nested"):
-            out.write(image)
+        out = TimeStream(path=outpath, format="tif", bundle_level=level, name="output")
+        for file in TimeStream("testdata/timestreams/nested"):
+            out.write(file)
         out.close()
         check_output_ok(outpath)
 

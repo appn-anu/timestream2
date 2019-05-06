@@ -11,6 +11,6 @@ class AlignStep(PipelineStep):
     def __init__(self, truncate_to='5_minute'):
         self.truncate_to = truncate_to
 
-    def process_image(self, image):
-        image.datetime = truncate(image.datetime, self.truncate_to)
-        return image
+    def process_file(self, file):
+        file.datetime = truncate(file.datetime, self.truncate_to)
+        return file

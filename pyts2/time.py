@@ -1,3 +1,8 @@
+# Copyright (c) 2018 Kevin Murray <kdmfoss@gmail.com>
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import datetime
 import re
 import os.path as op
@@ -5,8 +10,17 @@ import os.path as op
 import iso8601
 
 
-TS_IMAGE_DATEFMT = "%Y_%m_%d_%H_%M_%S"
-TS_IMAGE_DATETIME_RE = re.compile(r"(\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d)(_\d+)?(_\w+)?")
+TS_DATEFMT = "%Y_%m_%d_%H_%M_%S"
+TS_DATETIME_RE = re.compile(r"(\d{4}_[0-1]\d_[0-3]\d_[0-2]\d_[0-5]\d_[0-5]\d)(_\d+)?(_\w+)?")
+
+
+def extract_datetime(path):
+    """Extracts the datetime-only portion of a path, or returns the full path"""
+    m = TS_DATETIME_RE.search(path)
+    if m is None:
+        return path
+    else:
+        return m[0]
 
 
 def parse_date(datestr):
@@ -25,7 +39,7 @@ def parse_date(datestr):
         pass
     # Then the usual
     try:
-        return datetime.datetime.strptime(datestr, TS_IMAGE_DATEFMT)
+        return datetime.datetime.strptime(datestr, TS_DATEFMT)
     except:
         pass
 
@@ -48,6 +62,8 @@ class TSInstant(object):
 
     def __init__(self, datetime, subsecond=0, index=None):
         self.datetime = parse_date(datetime)
+        if subsecond is None:
+            subsecond = 0
         self.subsecond = int(subsecond)
         self.index = index
 
@@ -100,6 +116,10 @@ class TSInstant(object):
     def iso8601(self):
         return self.datetime.strftime("%Y-%m-%dT%H:%M:%S")
 
+    @classmethod
+    def now(cls):
+        return cls(datetime.datetime.now())
+
     @staticmethod
     def from_path(path):
         """Extract date and index from path to timestream image
@@ -107,7 +127,7 @@ class TSInstant(object):
         :param path: File path, with or without directory
         """
         fn = op.splitext(op.basename(path))[0]
-        m = TS_IMAGE_DATETIME_RE.search(fn)
+        m = TS_DATETIME_RE.search(fn)
         if m is None:
             raise ValueError("path '" + path + "' doesn't contain a timestream date")
 
