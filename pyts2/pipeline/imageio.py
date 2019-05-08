@@ -17,6 +17,7 @@ import sys
 import imageio
 import numpy as np
 import rawpy
+import cv2
 import skimage as ski
 from PIL import Image
 
@@ -131,8 +132,8 @@ class EncodeImageFileStep(PipelineStep):
             with io.BytesIO() as buf:
                 file.pil.save(buf, **self.options)
                 content = buf.getvalue()
-        else:
-            content = imageio.imwrite('<bytes>', file.pixels, **self.options)
+        elif self.format == "png" or self.format == "jpg":
+            content = imageio.imwrite('<bytes>', file.rgb_8, **self.options)
         # reinstatiate and demote to a TimestreamFile
         return TimestreamFile(content=content, filename=filename,
                               instant=file.instant, report=file.report)
@@ -144,7 +145,9 @@ class TimestreamImage(TimestreamFile):
     def __init__(self, instant=None, filename=None, fetcher=None, content=None,
                  report=None, pixels=None, exifdata=None):
         super().__init__(instant, filename, fetcher, content, report)
-        self.pixels = pixels
+        self._pixels = None
+        if pixels is not None:
+            self._pixels = ski.img_as_float(pixels)
         self.exifdata = exifdata
 
     def save(self, outpath):
@@ -155,24 +158,36 @@ class TimestreamImage(TimestreamFile):
         imageio.imwrite(outpath, self.pixels)
 
     @property
-    def rgb(self):
-        return self.pixels
+    def rgb_8(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return ski.img_as_ubyte(self.pixels)
+
+    @property
+    def rgb_16(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return ski.img_as_uint(self.pixels)
+
+    @property
+    def bgr_8(self):
+        return self.rgb_8[:, :, ::-1] # RGB->BGR
 
     @property
     def Lab(self):
         return ski.color.rgb2lab(self.pixels)
 
     @property
-    def pixels01(self):
-        return self.pixels.astype(np.float64) / np.iinfo(self.pixels.dtype).max
+    def pixels(self):
+        return self._pixels
+
+    @pixels.setter
+    def pixels(self, value):
+        self._pixels = ski.img_as_float(value)
 
     @property
     def pil(self):
-        if self.pixels.dtype == np.uint8:
-            return Image.fromarray(self.pixels)
-        elif self.pixels.dtype == np.uint16:
-            pix = (self.pixels / 256.0).astype(np.uint8)
-            return Image.fromarray(pix)
+        return Image.fromarray(self.rgb_8)
 
     @staticmethod
     def from_path(path):
