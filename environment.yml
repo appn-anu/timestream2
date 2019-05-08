@@ -9,6 +9,7 @@ dependencies:
   - iso8601
   - msgpack-python
   - numpy
+  - opencv
   - scikit-image
   - tqdm
   - zbarlight
