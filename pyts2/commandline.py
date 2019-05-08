@@ -25,18 +25,18 @@ def tstk_main():
               help="Force writing to an existing stream")
 @click.option("--informat", "-F", default=None,
               help="Input image format (use extension as lower case for raw formats)")
-@click.option("--level", "-l", type=Choice(TimeStream.bundle_levels), default="none",
+@click.option("--bundle", "-b", type=Choice(TimeStream.bundle_levels), default="none",
               help="Level at which to bundle files")
 @click.argument("input")
                 #help="Input files in timestream format of any form but msgpack")
 @click.argument("output")
                 #help="Output file or directory")
-def bundle(force, informat, format, level, input, output):
+def bundle(force, informat, format, bundle, input, output):
     input = TimeStream(input, format=informat)
     if os.path.exists(output) and not force:
         click.echo(f"ERROR: output exists: {output}", err=True)
         sys.exit(1)
-    output =  TimeStream(output, format=format, bundle_level=level)
+    output =  TimeStream(output, format=format, bundle_level=bundle)
     for image in input:
         with CatchSignalThenExit():
             output.write(image)
@@ -81,19 +81,19 @@ def audit(output, input, threads=1, informat=None):
               help="Input image format (use extension as lower case for raw formats)")
 @click.option("--outformat", "-f", default="jpg", type=Choice(("jpg", "png", "tif")),
               help="Output image format")
-@click.option("--level", "-l", type=Choice(TimeStream.bundle_levels), default="none",
-              help="Level at which to bundle files")
+@click.option("--bundle", "-b", type=Choice(TimeStream.bundle_levels), default="none",
+              help="Level at which to bundle files.")
 @click.option("--size", "-s", default='720x',
               help="Output size. Use ROWSxCOLS. One of ROWS or COLS can be omitted to keep aspect ratio.")
 @click.argument("input")
-def resize(input, output, threads, informat, outformat, size, level):
+def resize(input, output, threads, informat, outformat, size, bundle):
     pipe = TSPipeline(
         DecodeImageFileStep(),
         ResizeImageStep(geom=size),
         EncodeImageFileStep(format=outformat),
     )
     ints = TimeStream(input, format=informat)
-    outts = TimeStream(output, format=outformat, bundle_level=level)
+    outts = TimeStream(output, format=outformat, bundle_level=bundle)
     pipe.process_to(ints, outts, ncpus=threads)
     click.echo(f"Resize {input}:{informat} to {output}:{outformat}, found {pipe.n} files")
 
