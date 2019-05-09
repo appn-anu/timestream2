@@ -1,10 +1,29 @@
 language: python
 python:
   - "3.6"
-  - "3.7-dev"  # 3.7 development branch
+cache:
+  directories:
+  - $HOME/miniconda
+
 before_install:
-  - sudo apt-get install -y libraw-dev libzbar-dev
+  - sudo apt-get update
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same.
+  - test -d $HOME/miniconda/bin || (wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && bash miniconda.sh -b -u -p $HOME/miniconda)
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  - conda init
+  - source $HOME/miniconda/etc/profile.d/conda.sh
+
 install:
-  - pip install -U -r tests/requirements.txt
+  - conda env update -n pyts2 -f dev-environment.yml --prune
+  - conda activate pyts2
+
 script:
+  - python setup.py develop
   - pytest --remote-data
+

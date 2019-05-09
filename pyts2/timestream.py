@@ -243,17 +243,17 @@ class TimeStream(object):
         if self.bundle == "root":
             return self.path
         elif self.bundle == "year":
-            bpath = f"{self.path}/{self.name}_%Y.zip"
+            bpath = f"{self.path}/{self.name}_%Y.{self.format}.zip"
         elif self.bundle == "month":
-            bpath = f"{self.path}/%Y/{self.name}_%Y_%m.zip"
+            bpath = f"{self.path}/%Y/{self.name}_%Y_%m.{self.format}.zip"
         elif self.bundle == "day":
-            bpath = f"{self.path}/%Y/%Y_%m/{self.name}_%Y_%m_%d.zip"
+            bpath = f"{self.path}/%Y/%Y_%m/{self.name}_%Y_%m_%d.{self.format}.zip"
         elif self.bundle == "hour":
-            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/{self.name}_%Y_%m_%d_%H.zip"
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/{self.name}_%Y_%m_%d_%H.{self.format}.zip"
         elif self.bundle == "minute":
-            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M.zip"
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M.{self.format}.zip"
         elif self.bundle == "second":
-            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M_%S.zip"
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M_%S.{self.format}.zip"
         return instant.datetime.strftime(bpath)
 
     def write(self, file):

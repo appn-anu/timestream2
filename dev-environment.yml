@@ -9,6 +9,7 @@ dependencies:
   - iso8601
   - msgpack-python
   - numpy
+  - opencv
   - pytest
   - pytest-cov
   - pytest-remotedata
