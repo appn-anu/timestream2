@@ -257,7 +257,7 @@ class TimeStream(object):
         return instant.datetime.strftime(bpath)
 
     def write(self, file):
-        if self.name is None:
+        if self.name is None or self.format is None:
             raise RuntimeError("TSv2Stream not opened")
         if not isinstance(file, TimestreamFile):
             raise TypeError("file should be a TimestreamFile")
