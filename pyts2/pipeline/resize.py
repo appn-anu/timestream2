@@ -34,7 +34,7 @@ class GenericDownsizerStep(PipelineStep):
 
     def _new_imagesize(self, imgshape):
         orows, ocols, _ = imgshape
-        if self.scale is None:
+        if self.scale is not None:
             rows = self.scale * orows
             cols = self.scale * ocols
         else:
@@ -44,6 +44,10 @@ class GenericDownsizerStep(PipelineStep):
             elif cols is None:
                 cols = ocols * (rows / orows)
         rows, cols = np.round((rows, cols)).astype(int)
+        if rows > orows:
+            rows = orows
+        if cols > ocols:
+            cols = ocols
         return rows, cols
 
 
@@ -74,9 +78,11 @@ class CropCentreStep(GenericDownsizerStep):
     def process_file(self, file):
         assert hasattr(file, "pixels")  # TODO proper check
 
+        # so
+        orow, ocol = file.pixels.shape
         rows, cols = self._new_imagesize(file.pixels.shape)
-        left = int(file.pixels.shape[0] * 0.25)
-        top = int(file.pixels.shape[1] * 0.25)
+        left = int((orow - rows) / 2)
+        top = int((ocol - cols) / 2)
 
         newpixels = file.pixels[left:left+rows, top:top+rows, :]
 
