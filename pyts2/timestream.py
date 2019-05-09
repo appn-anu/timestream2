@@ -167,7 +167,10 @@ class TimeStream(object):
 
     def open(self, path, format=None):
         if self.name is None:
-            self.name = op.splitext(op.basename(path))[0]
+            self.name = op.basename(path)
+            for ext in [".tar", ".zip", f".{format}"]:
+                if self.name.lower().endswith(ext):
+                    self.name = self.name[:-len(ext)]
         if format is not None:
             format = format.lstrip(".")
         self.format = format
@@ -241,7 +244,7 @@ class TimeStream(object):
         if self.bundle == "none":
             return None
         if self.bundle == "root":
-            return self.path
+            return f"{self.path}.{self.format}.zip"
         elif self.bundle == "year":
             bpath = f"{self.path}/{self.name}_%Y.{self.format}.zip"
         elif self.bundle == "month":
@@ -269,8 +272,16 @@ class TimeStream(object):
             with open(outpath, 'wb') as fh:
                 fh.write(file.content)
         else:
+            if self.bundle == "root":
+                self.path = str(path)
+                for ext in [".tar", ".zip", f".{self.format}"]:
+                    if self.path.lower().endswith(ext):
+                        self.path = self.path[:-len(ext)]
+                self.path = Path(self.path)
             bundle = self._bundle_archive_path(file.instant)
-            os.makedirs(op.dirname(bundle), exist_ok=True)
+            bdir = op.dirname(bundle)
+            if bdir:  # i.e. if not $PWD
+                os.makedirs(bdir, exist_ok=True)
             # TODO this logic should probably live in TSfile
             with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
                                  allowZip64=True) as zip:
