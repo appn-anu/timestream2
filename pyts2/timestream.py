@@ -273,7 +273,7 @@ class TimeStream(object):
                 fh.write(file.content)
         else:
             if self.bundle == "root":
-                self.path = str(path)
+                self.path = str(self.path)
                 for ext in [".tar", ".zip", f".{self.format}"]:
                     if self.path.lower().endswith(ext):
                         self.path = self.path[:-len(ext)]
