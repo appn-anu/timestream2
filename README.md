@@ -1,5 +1,7 @@
 # pyts2: Next-generation TimeStream utility
 
+[![Build Status](https://travis-ci.org/appf-anu/timestream2.svg?branch=master)](https://travis-ci.org/appf-anu/timestream2)
+
 A Python3 library and CLI for manipulating time-series image data, with a focus on plant phenomics.
 
 Created by the ANU node of the Australian Plant Phenomics Facility (principally by Kevin Murray).
