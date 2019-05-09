@@ -96,4 +96,4 @@ def test_zipout(tmpdir):
         check_output_ok(outpath)
 
         expect = {str(tmpdir.join(level, x)) for x in outputs[level]}
-        assert set(find_files(outpath)) == expect
+        assert set(find_files(tmpdir.join(level))) == expect
