@@ -49,7 +49,7 @@ def test_zipout(tmpdir):
 
     outputs = {
         "root":  [
-            "output.zip",
+            "output.tif.zip",
         ],
         "year":  [
             "output/output_2001.tif.zip",
@@ -89,8 +89,6 @@ def test_zipout(tmpdir):
 
     for level in outputs.keys():
         outpath = tmpdir.join(level, "output")
-        if level == "root":
-            outpath += ".zip"
         out = TimeStream(path=outpath, format="tif", bundle_level=level, name="output")
         for file in TimeStream("testdata/timestreams/nested"):
             out.write(file)
@@ -98,4 +96,4 @@ def test_zipout(tmpdir):
         check_output_ok(outpath)
 
         expect = {str(tmpdir.join(level, x)) for x in outputs[level]}
-        assert set(find_files(outpath)) == expect
+        assert set(find_files(tmpdir.join(level))) == expect
