@@ -83,19 +83,28 @@ def audit(output, input, threads=1, informat=None):
               help="Output image format")
 @click.option("--bundle", "-b", type=Choice(TimeStream.bundle_levels), default="none",
               help="Level at which to bundle files.")
+@click.option("--mode", "-m", default='resize', type=Choice(('resize', 'centrecrop')),
+              help="Either resize whole image to --size, or crop out central " +
+                   "--size pixels at original resolution.")
 @click.option("--size", "-s", default='720x',
               help="Output size. Use ROWSxCOLS. One of ROWS or COLS can be omitted to keep aspect ratio.")
 @click.argument("input")
-def resize(input, output, threads, informat, outformat, size, bundle):
+def downsize(input, output, threads, informat, outformat, size, bundle, mode):
+    if mode == "resize":
+        downsizer = ResizeImageStep(geom=size),
+    elif mode == "centrecrop" or mode == "crop":
+        downsizer = CropCentreStep(geom=size),
     pipe = TSPipeline(
         DecodeImageFileStep(),
-        ResizeImageStep(geom=size),
+        downsizer,
         EncodeImageFileStep(format=outformat),
     )
     ints = TimeStream(input, format=informat)
     outts = TimeStream(output, format=outformat, bundle_level=bundle)
-    pipe.process_to(ints, outts, ncpus=threads)
-    click.echo(f"Resize {input}:{informat} to {output}:{outformat}, found {pipe.n} files")
+    try:
+        pipe.process_to(ints, outts, ncpus=threads)
+    finally:
+        click.echo(f"{mode} {input}:{informat} to {output}:{outformat}, found {pipe.n} files")
 
 
 if __name__ == "__main__":
