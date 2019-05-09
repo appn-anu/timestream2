@@ -16,6 +16,7 @@ from .audit import (
 )
 from .resize import (
     ResizeImageStep,
+    CropCentreStep,
 )
 from .align_time import AlignStep
 from .imageio import (
