@@ -149,7 +149,7 @@ class TimeStream(object):
     def __init__(self, path=None, format=None, onerror="warn",
                  bundle_level="none", name=None):
         """path is the base directory of a timestream"""
-        self._files = {}  # TODO: add each new entry encountered
+        self._files = {}
         self.name = name
         self.path = None
         self.format = None
