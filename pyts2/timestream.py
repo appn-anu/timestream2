@@ -6,7 +6,6 @@
 from pyts2.time import *
 from pyts2.utils import *
 
-
 import datetime as dt
 import io
 import os
@@ -150,7 +149,7 @@ class TimeStream(object):
     def __init__(self, path=None, format=None, onerror="warn",
                  bundle_level="none", name=None):
         """path is the base directory of a timestream"""
-        self._files = set() # TODO: add each new entry encountered
+        self._files = {}  # TODO: add each new entry encountered
         self.name = name
         self.path = None
         self.format = None
@@ -180,6 +179,17 @@ class TimeStream(object):
     def instants(self):
         return list(sorted(f.instant for f in self.iter(tar_contents=False)))
 
+    def __getitem__(self, filename):
+        try:
+            return TimestreamFile(filename=filename, fetcher=self._files[filename])
+        except KeyError as exc:
+            for _ in self.iter(tar_contents=False):
+                pass
+            if filename in self._files:
+                return TimestreamFile(filename=filename, fetcher=self._files[filename])
+            else:
+                raise exc
+
     def iter(self, tar_contents=True):
         def walk_archive(path):
             if zipfile.is_zipfile(str(path)):
@@ -191,6 +201,7 @@ class TimeStream(object):
                         if entry.is_dir():
                             continue
                         if path_is_timestream_file(entry.filename, extensions=self.format):
+                            self._files[op.basename(entry.filename)] = ZipContentFetcher(path, entry.filename)
                             yield TimestreamFile(filename=entry.filename,
                                                  fetcher=ZipContentFetcher(path, entry.filename))
             elif tarfile.is_tarfile(path):
@@ -205,6 +216,7 @@ class TimeStream(object):
                             if tar_contents:
                                 yield TimestreamFile.from_bytes(filebytes, filename=entry.name)
                             else:
+                                self._files[op.basename(entry.name)] = TarContentFetcher(path, entry.name)
                                 yield TimestreamFile(filename=entry.name,
                                                      fetcher=TarContentFetcher(path, entry.name))
             else: raise ValueError(f"'{path}' appears not to be an archive")
@@ -225,6 +237,7 @@ class TimeStream(object):
                 if is_archive(path):
                     yield from walk_archive(path)
                 if path_is_timestream_file(path, extensions=self.format):
+                    self._files[op.basename(path)] = FileContentFetcher(path)
                     yield TimestreamFile.from_path(path)
 
 

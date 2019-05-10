@@ -98,3 +98,28 @@ def test_zipout(tmpdir, data):
 
         expect = {str(tmpdir.join(level, x)) for x in outputs[level]}
         assert set(find_files(tmpdir.join(level))) == expect
+
+
+def test_dict():
+    timestreams = [
+        "testdata/timestreams/nested",
+        "testdata/timestreams/nested.zip",
+        "testdata/timestreams/nested.tar",
+    ]
+    filenames = [
+        "2001_02_01_09_14_15_00.tif",
+        "2001_02_01_10_14_15_00.tif",
+        "2001_02_01_11_14_15_00.tif",
+        "2001_02_01_12_14_15_00.tif",
+        "2001_02_01_13_14_15_00.tif",
+        "2001_02_02_09_14_15_00.tif",
+        "2001_02_02_10_14_15_00.tif",
+        "2001_02_02_11_14_15_00.tif",
+        "2001_02_02_12_14_15_00.tif",
+        "2001_02_02_13_14_15_00.tif",
+    ]
+    for timestream in timestreams:
+        stream = TimeStream(timestream)
+        for fn in filenames:
+            assert stream[fn].filename == fn
+
