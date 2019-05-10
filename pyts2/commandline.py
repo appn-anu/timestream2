@@ -91,9 +91,9 @@ def audit(output, input, threads=1, informat=None):
 @click.argument("input")
 def downsize(input, output, threads, informat, outformat, size, bundle, mode):
     if mode == "resize":
-        downsizer = ResizeImageStep(geom=size),
+        downsizer = ResizeImageStep(geom=size)
     elif mode == "centrecrop" or mode == "crop":
-        downsizer = CropCentreStep(geom=size),
+        downsizer = CropCentreStep(geom=size)
     pipe = TSPipeline(
         DecodeImageFileStep(),
         downsizer,
