@@ -1,5 +1,8 @@
 from pyts2 import TSInstant
 
+from .utils import *
+
+
 def test_tsinstant_cmp():
     testcases = [
         # a list of (smaller, bigger) instants

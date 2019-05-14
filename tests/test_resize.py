@@ -1,6 +1,7 @@
 from pyts2.pipeline import *
 from pyts2.pipeline.resize import geom2rowcol
 from pyts2 import *
+
 from .data import *
 from .utils import *
 
@@ -21,8 +22,8 @@ def test_geom2rowcol():
         geom2rowcol("not a geometry")
 
 
-def test_resize():
-    img = TimestreamImage.from_path("testdata/images/GC37L~320_2019_04_01_00_00_00.jpg")
+def test_resize(data):
+    img = TimestreamImage.from_path(data("images/GC37L~320_2019_04_01_00_00_00.jpg"))
     orows, ocols, odepth = img.pixels.shape
 
     downsized = ResizeImageStep(cols=100).process_file(img)
