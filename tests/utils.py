@@ -26,6 +26,7 @@ def wget(url, directory):
 def getdatapath(path):
     return f"tests/data/{path}"
 
+
 @pytest.fixture
 def data():
     return getdatapath
@@ -38,5 +39,6 @@ def largedata(request):
     if not op.exists(datadir):
         porcelain.clone("https://github.com/appf-anu/large_testdata.git", datadir, checkout=True)
     else:
-        porcelain.pull(datadir, "https://github.com/appf-anu/large_testdata.git")
+        pass
+        #porcelain.pull(datadir, "https://github.com/appf-anu/large_testdata.git")
     return lambda path: f"{datadir}/{path}"

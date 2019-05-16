@@ -18,6 +18,9 @@ from .resize import (
     ResizeImageStep,
     CropCentreStep,
 )
+from .correction import (
+    ColourCorrectImageStep,
+)
 from .align_time import AlignStep
 from .imageio import (
     TimestreamImage,

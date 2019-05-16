@@ -143,12 +143,11 @@ class TimestreamImage(TimestreamFile):
     """Image class for all timestreams"""
 
     def __init__(self, instant=None, filename=None, fetcher=None, content=None,
-                 report=None, pixels=None, exifdata=None):
-        super().__init__(instant, filename, fetcher, content, report)
+                 report=None, pixels=None, data=None):
+        super().__init__(instant, filename, fetcher, content, report, data=data)
         self._pixels = None
         if pixels is not None:
             self._pixels = ski.img_as_float(pixels)
-        self.exifdata = exifdata
 
     def save(self, outpath):
         """Writes file to `outpath`, in whatever format the extension of `outpath` suggests.
@@ -202,6 +201,7 @@ class TimestreamImage(TimestreamFile):
             "filename": file.filename,
             "fetcher": file.fetcher,
             "report": file.report,
+            "data": file.data,
         }
         params.update(kwargs)
         return cls(**params)

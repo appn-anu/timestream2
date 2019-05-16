@@ -82,10 +82,11 @@ class FileContentFetcher(object):
 
 class TimestreamFile(object):
     '''A container class for files in timestreams'''
-    def __init__(self, instant=None, filename=None, fetcher=None, content=None, report=None):
+    def __init__(self, instant=None, filename=None, fetcher=None, content=None, report=None, data=dict()):
         self.instant = instant
         self.filename = filename
         self.fetcher = fetcher
+        self.data = data
         self._content = content
         # a report from various pipeline components on this file
         if report is None:
