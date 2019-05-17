@@ -100,11 +100,11 @@ def test_zipout(tmpdir, data):
         assert set(find_files(tmpdir.join(level))) == expect
 
 
-def test_dict():
+def test_dict(data):
     timestreams = [
-        "testdata/timestreams/nested",
-        "testdata/timestreams/nested.zip",
-        "testdata/timestreams/nested.tar",
+        data("timestreams/nested"),
+        data("timestreams/nested.zip"),
+        data("timestreams/nested.tar"),
     ]
     filenames = [
         "2001_02_01_09_14_15_00.tif",
@@ -121,5 +121,10 @@ def test_dict():
     for timestream in timestreams:
         stream = TimeStream(timestream)
         for fn in filenames:
-            assert stream[fn].filename == fn
+            gotfile = stream[fn]
+            assert gotfile.filename == fn
+            assert len(gotfile.content) > 0
+            assert isinstance(gotfile.content, bytes)
+        with pytest.raises(KeyError):
+            stream["Not a file"]
 

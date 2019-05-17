@@ -66,7 +66,7 @@ class TarContentFetcher(object):
 
     def get(self):
         with tarfile.TarFile(self.tarfile) as tfh:
-            return tar.extractfile(self.pathintar).read()
+            return tfh.extractfile(self.pathintar).read()
 
 
 class FileContentFetcher(object):
@@ -180,15 +180,12 @@ class TimeStream(object):
         return list(sorted(f.instant for f in self.iter(tar_contents=False)))
 
     def __getitem__(self, filename):
-        try:
-            return TimestreamFile(filename=filename, fetcher=self._files[filename])
-        except KeyError as exc:
+        if len(self._files) == 0:
+            # the iterator sets up the files dict, so if we don't have any recorded files,
+            # scan through to set up the dict
             for _ in self.iter(tar_contents=False):
                 pass
-            if filename in self._files:
-                return TimestreamFile(filename=filename, fetcher=self._files[filename])
-            else:
-                raise exc
+        return TimestreamFile(filename=filename, fetcher=self._files[filename])
 
     def iter(self, tar_contents=True):
         def walk_archive(path):
