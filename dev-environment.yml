@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=3.*
   - click
+  - dulwich
   - flask
   - imageio
   - iso8601
