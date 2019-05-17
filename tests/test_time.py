@@ -81,9 +81,6 @@ def test_parsepartial():
     tmin = dt.time.min
     tmax = dt.time.max
 
-    #assert parse_partial_date("", max=False) == dmin
-    #assert parse_partial_date("", max=True) == dmax
-
     assert parse_partial_date("2019", max=False) == \
            (dmin.replace(2019), None)
     assert parse_partial_date("2019", max=True) == \
