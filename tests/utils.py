@@ -37,6 +37,8 @@ def largedata(request):
     datadir = getdatapath("largedata")
     if not op.exists(datadir):
         porcelain.clone("https://github.com/appf-anu/large_testdata.git", datadir, checkout=True)
-    else:
-        porcelain.pull(datadir, "https://github.com/appf-anu/large_testdata.git")
+    # This makes the tests super slow, and can overwrite changes. If you need to update testdata,
+    # just delete the data directory and it will be re-cloned.
+    #else:
+    #    porcelain.pull(datadir, "https://github.com/appf-anu/large_testdata.git")
     return lambda path: f"{datadir}/{path}"
