@@ -4,6 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import datetime
+import calendar
 import re
 import os.path as op
 
@@ -144,3 +145,98 @@ class TSInstant(object):
         if index is not None:
             index = index.lstrip("_")
         return TSInstant(datetime, subsec, index)
+
+def parse_partial_date(datestr, max=False):
+    m = re.search(r"_?(?P<Y>\d\d\d\d)(?:_(?P<m>\d\d)(?:_(?P<d>\d\d))?(?:_(?P<H>\d\d))?(?:_(?P<M>\d\d))?(?:_(?P<S>\d\d))?)?",
+                  datestr)
+    if m is None:
+        raise ValueError("date string '" + datestr + "' doesn't match date formats")
+    d = datetime.date.max if max else datetime.date.min
+    t = None
+
+    if m["Y"]:
+        d = d.replace(year=int(m["Y"]))
+    if m["m"]:
+        # because not all months have the same length, we have to calculate the maximum day of this
+        # month by hand
+        yr, mth = int(m["Y"]), int(m["m"])
+        day = calendar.monthrange(yr, mth)[1] if max else 1
+        d = d.replace(month=int(m["m"]), day=day)
+    if m["d"]:
+        d = d.replace(day=int(m["d"]))
+    if m["H"]:
+        t = datetime.time.max if max else datetime.time.min
+        t = t.replace(hour=int(m["H"]))
+    if m["M"]:
+        t = t.replace(minute=int(m["M"]))
+    if m["S"]:
+        t = t.replace(second=int(m["S"]))
+    return d, t
+
+
+class TimeFilter(object):
+    def __init__(self, startdate=None, enddate=None, starttime=None, endtime=None):
+        def convert_date(d):
+            if isinstance(d, datetime.date):
+                return d
+            elif isinstance(d, TSInstant):
+                return time.datetime.date()
+            elif isinstance(d, datetime.datetime):
+                return d.date()
+            elif isinstance(d, str):
+                return parse_date(d).date()
+            elif d is None:
+                return None
+            else:
+                TypeError("Bad date")
+
+        def convert_time(t):
+            if isinstance(t, datetime.time):
+                return t
+            elif isinstance(t, TSInstant):
+                return t.datetime.time()
+            elif isinstance(t, datetime.datetime):
+                return t.time()
+            elif isinstance(t, str):
+                return parse_date(t).time()
+            elif t is None:
+                return None
+            else:
+                TypeError("Bad date")
+
+        self.startdate = convert_date(startdate)
+        self.enddate = convert_date(enddate)
+        if self.startdate is not None and self.enddate is not None and self.startdate > self.enddate:
+            raise ValueError("Can't have startdate > enddate")
+
+        self.starttime = convert_time(starttime)
+        self.endtime = convert_time(endtime)
+        if self.starttime is not None and self.endtime is not None and self.starttime > self.endtime:
+            raise ValueError("Can't have starttime > endtime")
+
+    def __call__(self, datetime):
+        d = datetime.date()
+        t = datetime.time()
+        if self.startdate is not None and d < self.startdate:
+            return False
+        if self.enddate is not None and d > self.enddate:
+            return False
+        if self.starttime is not None and t < self.starttime:
+            return False
+        if self.endtime is not None and t > self.endtime:
+            return False
+        return True
+
+    def partial_within(self, datestr):
+        dmin, tmin = parse_partial_date(datestr, max=False)
+        dmax, tmax = parse_partial_date(datestr, max=True)
+
+        if self.startdate is not None and dmax < self.startdate:
+            return False
+        if self.enddate is not None and dmin > self.enddate:
+            return False
+        if self.starttime is not None and tmax is not None and tmax < self.starttime:
+            return False
+        if self.endtime is not None and tmin is not None and tmin > self.endtime:
+            return False
+        return True
