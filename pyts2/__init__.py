@@ -4,7 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-from pyts2.time import TSInstant
+from pyts2.time import TSInstant, TimeFilter
 from pyts2.timestream import TimeStream, TimestreamFile
 from pyts2._version import get_versions
 __version__ = get_versions()['version']

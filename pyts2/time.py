@@ -144,3 +144,57 @@ class TSInstant(object):
         if index is not None:
             index = index.lstrip("_")
         return TSInstant(datetime, subsec, index)
+
+
+class TimeFilter(object):
+    def __init__(self, startdate=None, enddate=None, starttime=None, endtime=None):
+        def convert_date(d):
+            if isinstance(d, datetime.date):
+                return d
+            elif isinstance(d, TSInstant):
+                return time.datetime.date()
+            elif isinstance(d, datetime.datetime):
+                return d.date()
+            elif isinstance(d, str):
+                return parse_date(d).date()
+            elif d is None:
+                return None
+            else:
+                TypeError("Bad date")
+
+        def convert_time(t):
+            if isinstance(t, datetime.time):
+                return t
+            elif isinstance(t, TSInstant):
+                return t.datetime.time()
+            elif isinstance(t, datetime.datetime):
+                return t.time()
+            elif isinstance(t, str):
+                return parse_date(t).time()
+            elif t is None:
+                return None
+            else:
+                TypeError("Bad date")
+
+        self.startdate = convert_date(startdate)
+        self.enddate = convert_date(enddate)
+        if self.startdate is not None and self.enddate is not None and self.startdate > self.enddate:
+            raise ValueError("Can't have startdate > enddate")
+
+        self.starttime = convert_time(starttime)
+        self.endtime = convert_time(endtime)
+        if self.starttime is not None and self.endtime is not None and self.starttime > self.endtime:
+            raise ValueError("Can't have starttime > endtime")
+
+    def __call__(self, datetime):
+        d = datetime.date()
+        t = datetime.time()
+        if self.startdate is not None and d < self.startdate:
+            return False
+        if self.enddate is not None and d > self.enddate:
+            return False
+        if self.starttime is not None and t < self.starttime:
+            return False
+        if self.endtime is not None and t > self.endtime:
+            return False
+        return True

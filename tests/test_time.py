@@ -1,4 +1,5 @@
-from pyts2 import TSInstant
+from pyts2 import TSInstant, TimeFilter
+import datetime as dt
 
 from .utils import *
 
@@ -20,3 +21,25 @@ def test_tsinstant_cmp():
         assert bigger >= bigger
         assert not bigger <= smaller
         assert bigger <= bigger
+
+def test_timefilter():
+    dtnow = dt.datetime.now()
+    dnow = dtnow.date()
+    tnow = dtnow.time()
+
+    assert TimeFilter()(dtnow)
+    assert TimeFilter(dt.date(2001, 1, 1), dt.date(2100, 1, 1))(dtnow)
+    assert TimeFilter(dt.date(2001, 1, 1))(dtnow)
+    assert TimeFilter(enddate=dt.date(2100, 1, 1))(dtnow)
+    assert not TimeFilter(dt.date(2100, 1, 1), dt.date(2200, 1, 1))(dtnow)
+
+    tminus1 = (dtnow - dt.timedelta(hours=1)).time()
+    tplus1 = (dtnow + dt.timedelta(hours=1)).time()
+    assert TimeFilter(starttime=tminus1)(dtnow)
+    assert TimeFilter(starttime=tminus1, endtime=tplus1)(dtnow)
+    assert not TimeFilter(endtime=tminus1)(dtnow)
+
+    with pytest.raises(ValueError):
+        assert TimeFilter(dt.date(2100, 1, 1), dt.date(2000, 1, 1))
+    with pytest.raises(ValueError):
+        assert TimeFilter(endtime=tminus1, starttime=tplus1)
