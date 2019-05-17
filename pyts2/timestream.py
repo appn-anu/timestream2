@@ -143,17 +143,21 @@ class TimestreamFile(object):
         return self.filename
 
 
+
 class TimeStream(object):
     bundle_levels = ("root", "year", "month", "day", "hour", "none")
 
     def __init__(self, path=None, format=None, onerror="warn",
-                 bundle_level="none", name=None):
+                 bundle_level="none", name=None, timefilter=None):
         """path is the base directory of a timestream"""
         self._files = {}
         self.name = name
         self.path = None
         self.format = None
         self.sorted = True
+        if timefilter is not None and not isinstance(timefilter, TimeFilter):
+            raise ValueError("TimeFilter is not valid")
+        self.timefilter = timefilter
         if bundle_level not in self.bundle_levels:
             raise ValueError("invalid bundle level %s",  bundle_level)
         self.bundle = bundle_level
@@ -197,10 +201,13 @@ class TimeStream(object):
                     for entry in entries:
                         if entry.is_dir():
                             continue
-                        if path_is_timestream_file(entry.filename, extensions=self.format):
-                            self._files[op.basename(entry.filename)] = ZipContentFetcher(path, entry.filename)
-                            yield TimestreamFile(filename=entry.filename,
-                                                 fetcher=ZipContentFetcher(path, entry.filename))
+                        if not path_is_timestream_file(entry.filename, extensions=self.format):
+                            continue
+                        if self.timefilter is not None and not self.timefilter.partial_within(op.basename(entry.filename)):
+                            continue
+                        self._files[op.basename(entry.filename)] = ZipContentFetcher(path, entry.filename)
+                        yield TimestreamFile(filename=entry.filename,
+                                                fetcher=ZipContentFetcher(path, entry.filename))
             elif tarfile.is_tarfile(path):
                 self.sorted = False
                 warnings.warn("Extracting files from a tar file. Sorted iteration is not guaranteed")
@@ -208,14 +215,17 @@ class TimeStream(object):
                     for entry in tar:
                         if not entry.isfile():
                             continue
-                        if path_is_timestream_file(entry.name, extensions=self.format):
+                        if not path_is_timestream_file(entry.name, extensions=self.format):
+                            continue
+                        if self.timefilter is not None and not self.timefilter.partial_within(op.basename(entry.name)):
+                            continue
+                        if tar_contents:
                             filebytes = tar.extractfile(entry).read()
-                            if tar_contents:
-                                yield TimestreamFile.from_bytes(filebytes, filename=entry.name)
-                            else:
-                                self._files[op.basename(entry.name)] = TarContentFetcher(path, entry.name)
-                                yield TimestreamFile(filename=entry.name,
-                                                     fetcher=TarContentFetcher(path, entry.name))
+                            yield TimestreamFile.from_bytes(filebytes, filename=entry.name)
+                        else:
+                            self._files[op.basename(entry.name)] = TarContentFetcher(path, entry.name)
+                            yield TimestreamFile(filename=entry.name,
+                                                    fetcher=TarContentFetcher(path, entry.name))
             else: raise ValueError(f"'{path}' appears not to be an archive")
 
         def is_archive(path):
@@ -231,6 +241,8 @@ class TimeStream(object):
             files.sort(key=lambda f: extract_datetime(f))
             for file in files:
                 path = op.join(root, file)
+                if self.timefilter is not None and not self.timefilter.partial_within(file):
+                    continue
                 if is_archive(path):
                     yield from walk_archive(path)
                 if path_is_timestream_file(path, extensions=self.format):

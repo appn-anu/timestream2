@@ -128,3 +128,25 @@ def test_dict(data):
         with pytest.raises(KeyError):
             stream["Not a file"]
 
+
+def test_read_with_filter(data):
+    timestreams = [
+        data("timestreams/nested/"), # with trailing slash
+        data("timestreams/nested"),
+        data("timestreams/nested.zip"),
+        data("timestreams/nested.tar"),
+        data("timestreams/zipball-day"),
+    ]
+
+    tfilter = TimeFilter(dt.date(2001, 2, 1), dt.date(2001, 2, 1),
+                         dt.time(10, 0, 0), dt.time(12, 0, 0))
+    expect_insts = [TSInstant.from_path("2001_02_01_10_14_15"),
+                    TSInstant.from_path("2001_02_01_11_14_15")]
+    for timestream in timestreams:
+        stream = TimeStream(timestream, timefilter=tfilter)
+        for i, file in enumerate(stream):
+            if stream.sorted:
+                assert file.instant == expect_insts[i]
+            else:
+                assert file.instant in expect_insts
+        assert stream.instants == expect_insts
