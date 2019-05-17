@@ -2,21 +2,22 @@ from pyts2.timestream import TimeStream
 from pyts2.time import *
 from pyts2.utils import find_files
 
+from .utils import *
 from .data import *
 
 import datetime as dt
 
-def test_read():
+def test_read(data):
     timestreams = [
-        "testdata/timestreams/flat",
-        "testdata/timestreams/flat.zip",
-        "testdata/timestreams/flat.tar",
-        "testdata/timestreams/nested/", # with trailing slash
-        "testdata/timestreams/nested",
-        "testdata/timestreams/nested.zip",
-        "testdata/timestreams/nested.tar",
-        "testdata/timestreams/tarball-day",
-        "testdata/timestreams/zipball-day",
+        data("timestreams/flat"),
+        data("timestreams/flat.zip"),
+        data("timestreams/flat.tar"),
+        data("timestreams/nested/"), # with trailing slash
+        data("timestreams/nested"),
+        data("timestreams/nested.zip"),
+        data("timestreams/nested.tar"),
+        data("timestreams/tarball-day"),
+        data("timestreams/zipball-day"),
     ]
 
     expect_insts = [TSInstant(t, subsecond=0, index=None)
@@ -32,15 +33,15 @@ def test_read():
         assert stream.instants == expect_insts
 
 
-def test_gvlike():
-    for i, file in enumerate(TimeStream("testdata/timestreams/gvlike")):
+def test_gvlike(data):
+    for i, file in enumerate(TimeStream(data("timestreams/gvlike"))):
         expect_inst = TSInstant(GVLIKE_TIMESTREAM["expect_datetime"],
                                 GVLIKE_TIMESTREAM["expect_subsecond"],
                                 GVLIKE_TIMESTREAM["expect_indices"][i])
         assert file.instant == expect_inst
 
 
-def test_zipout(tmpdir):
+def test_zipout(tmpdir, data):
     def check_output_ok(outpath):
         for i, file in enumerate(TimeStream(outpath)):
             expect_inst = TSInstant(SMALL_TIMESTREAMS["expect_times"][i],
@@ -90,7 +91,7 @@ def test_zipout(tmpdir):
     for level in outputs.keys():
         outpath = tmpdir.join(level, "output")
         out = TimeStream(path=outpath, format="tif", bundle_level=level, name="output")
-        for file in TimeStream("testdata/timestreams/nested"):
+        for file in TimeStream(data("timestreams/nested")):
             out.write(file)
         out.close()
         check_output_ok(outpath)

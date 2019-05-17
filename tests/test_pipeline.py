@@ -1,5 +1,6 @@
 from pyts2.pipeline import *
 from pyts2 import *
+
 from .data import *
 from .utils import *
 
@@ -18,13 +19,13 @@ class PretendTimestream(object):
         self.files.append(file)
 
 
-def test_pipeline():
+def test_pipeline(data):
     fakeout = PretendTimestream()
     pipe = TSPipeline()
     pipe.add_step(TeeStep(fakeout))
 
     files = []
-    for file in pipe(TimeStream("testdata/timestreams/flat")):
+    for file in pipe(TimeStream(data("timestreams/flat"))):
         files.append(file)
 
     for wegot, pretendgot in zip(files, fakeout.files):
@@ -62,7 +63,7 @@ def test_encodedecodestep():
 
 @pytest.mark.remote_data
 def test_decoderaw(largedata):
-    rawfile = largedata["GC37L_2019_04_11_04_00_00.cr2"]
+    rawfile = largedata("GC37L_2019_04_11_04_00_00.cr2")
     tsfile = TimestreamFile.from_path(rawfile)
     decoded_image = DecodeImageFileStep().process_file(tsfile)
     assert isinstance(decoded_image, TimestreamImage)
