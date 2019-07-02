@@ -1,3 +1,5 @@
+workspace/
+
 .pytest_cache/
 # Prerequisites
 *.d
