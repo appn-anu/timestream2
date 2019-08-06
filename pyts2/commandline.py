@@ -11,7 +11,7 @@ import os
 import sys
 
 import click
-from click import Choice
+from click import Choice, Path, DateTime
 from tqdm import tqdm
 
 
@@ -105,6 +105,66 @@ def downsize(input, output, threads, informat, outformat, size, bundle, mode):
         pipe.process_to(ints, outts, ncpus=threads)
     finally:
         click.echo(f"{mode} {input}:{informat} to {output}:{outformat}, found {pipe.n} files")
+
+
+
+####################################################################################################
+#                                              RESIZE                                              #
+####################################################################################################
+@tstk_main.command()
+@click.argument("input", type=Path(readable=True, exists=True))
+@click.option("--informat", "-F", default=None,
+              help="Input image format (use extension as lower case for raw formats)")
+@click.option("--output", "-o", required=True, type=Path(writable=True),
+              help="Archival bundled TimeStream")
+@click.option("--bundle", "-b", type=Choice(TimeStream.bundle_levels), default="none",
+              help="Level at which to bundle files.")
+@click.option("--threads", "-t", default=1,
+              help="Number of parallel workers")
+@click.option("--downsized-output", "-s", default=None,
+              help="Output a downsized copy of the images here")
+@click.option("--downsized-size", "-s", default='720x',
+              help="Downsized output size. Use ROWSxCOLS. One of ROWS or COLS can be omitted to keep aspect ratio.")
+@click.option("--downsized-bundle", "-B", type=Choice(TimeStream.bundle_levels), default="root",
+              help="Level at which to bundle downsized images.")
+@click.option("--audit-output", "-a", type=Path(writable=True), default=None,
+              help="Level at which to bundle downsized images.")
+def ingest(input, informat, output, bundle, threads, downsized_output, downsized_size, downsized_bundle, audit_output):
+    ints = TimeStream(input, format=informat)
+    outts = TimeStream(output, format=informat, bundle_level=bundle)
+
+    steps = [WriteFileStep(outts)]
+
+    if downsized_output is not None or audit_output is not None:
+        steps.append(DecodeImageFileStep())
+
+    if downsized_output is not None:
+        downsized_ts = TimeStream(downsized_output, format="jpg", bundle_level=downsized_bundle)
+        downsize_pipeline = TSPipeline(
+            ResizeImageStep(geom=downsized_size),
+            EncodeImageFileStep(format="jpg"),
+            WriteFileStep(downsized_ts),
+        )
+        steps.append(downsize_pipeline)
+
+    if audit_output is not None:
+        audit_pipe = TSPipeline(
+            FileStatsStep(),
+            ImageMeanColourStep(),
+            ScanQRCodesStep(),
+        )
+        steps.append(audit_pipe)
+
+    pipe = TSPipeline(*steps)
+
+    try:
+        for image in pipe.process(ints, ncpus=threads):
+            pass
+    finally:
+        pipe.finish()
+        if audit_output is not None:
+            pipe.report.save(audit_output)
+        click.echo(f"Ingested {input}:{informat} to {output}, found {pipe.n} files")
 
 
 if __name__ == "__main__":

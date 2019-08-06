@@ -79,6 +79,11 @@ class TSPipeline(object):
         pass
 
 
+    def finish(self):
+        for step in self.steps:
+            step.finish()
+
+
 class ResultRecorder(object):
 
     def __init__(self):
@@ -125,6 +130,27 @@ class PipelineStep(object):
     def process_file(self, file):
         return file
 
+    def finish(self):
+        pass
+
+
+class ResultRecorderStep(PipelineStep):
+    
+    def __init__(self, output_file):
+        self.n = 0
+        self.output_file = output_file
+        self.report = ResultRecorder()
+        self.write_interval = 1000  # write results every write_interval images
+
+    def process_file(self, file):
+        self.report.record(file.instant, **file.report)
+        self.n += 1
+        if self.n % self.write_interval == 0:
+            self.report.save(self.output_file)
+
+    def finish(self):
+        self.report.save(self.output_file)
+
 
 class CopyStep(PipelineStep):
     """Does Nothing"""
@@ -139,6 +165,11 @@ class TeeStep(PipelineStep):
     def process_file(self, file):
         self.output.write(file)
         return file
+
+
+class WriteFileStep(TeeStep):
+    """Write each file to output, without changing the file"""
+    pass
 
 
 class FileStatsStep(PipelineStep):
