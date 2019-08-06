@@ -123,7 +123,7 @@ def downsize(input, output, threads, informat, outformat, size, bundle, mode):
               help="Number of parallel workers")
 @click.option("--downsized-output", "-s", default=None,
               help="Output a downsized copy of the images here")
-@click.option("--downsized-size", "-s", default='720x',
+@click.option("--downsized-size", "-S", default='720x',
               help="Downsized output size. Use ROWSxCOLS. One of ROWS or COLS can be omitted to keep aspect ratio.")
 @click.option("--downsized-bundle", "-B", type=Choice(TimeStream.bundle_levels), default="root",
               help="Level at which to bundle downsized images.")
@@ -135,12 +135,13 @@ def ingest(input, informat, output, bundle, threads, downsized_output, downsized
 
     steps = [WriteFileStep(outts)]
 
-    if downsized_output is not None or audit_output is not None:
-        steps.append(DecodeImageFileStep())
+    #if downsized_output is not None or audit_output is not None:
+    #    steps.append(DecodeImageFileStep())
 
     if downsized_output is not None:
         downsized_ts = TimeStream(downsized_output, format="jpg", bundle_level=downsized_bundle)
         downsize_pipeline = TSPipeline(
+            DecodeImageFileStep(),
             ResizeImageStep(geom=downsized_size),
             EncodeImageFileStep(format="jpg"),
             WriteFileStep(downsized_ts),
@@ -150,6 +151,7 @@ def ingest(input, informat, output, bundle, threads, downsized_output, downsized
     if audit_output is not None:
         audit_pipe = TSPipeline(
             FileStatsStep(),
+            DecodeImageFileStep(),
             ImageMeanColourStep(),
             ScanQRCodesStep(),
         )
