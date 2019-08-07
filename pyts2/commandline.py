@@ -128,7 +128,7 @@ def downsize(input, output, threads, informat, outformat, size, bundle, mode):
 @click.option("--downsized-bundle", "-B", type=Choice(TimeStream.bundle_levels), default="root",
               help="Level at which to bundle downsized images.")
 @click.option("--audit-output", "-a", type=Path(writable=True), default=None,
-              help="Level at which to bundle downsized images.")
+              help="Audit log output TSV. If given, input images will be audited, with the log saved here.")
 def ingest(input, informat, output, bundle, threads, downsized_output, downsized_size, downsized_bundle, audit_output):
     ints = TimeStream(input, format=informat)
     outts = TimeStream(output, format=informat, bundle_level=bundle)
@@ -137,6 +137,16 @@ def ingest(input, informat, output, bundle, threads, downsized_output, downsized
 
     #if downsized_output is not None or audit_output is not None:
     #    steps.append(DecodeImageFileStep())
+
+    if audit_output is not None:
+        audit_pipe = TSPipeline(
+            FileStatsStep(),
+            DecodeImageFileStep(),
+            ImageMeanColourStep(),
+            ScanQRCodesStep(),
+        )
+        steps.append(audit_pipe)
+
 
     if downsized_output is not None:
         downsized_ts = TimeStream(downsized_output, format="jpg", bundle_level=downsized_bundle)
@@ -147,15 +157,6 @@ def ingest(input, informat, output, bundle, threads, downsized_output, downsized
             WriteFileStep(downsized_ts),
         )
         steps.append(downsize_pipeline)
-
-    if audit_output is not None:
-        audit_pipe = TSPipeline(
-            FileStatsStep(),
-            DecodeImageFileStep(),
-            ImageMeanColourStep(),
-            ScanQRCodesStep(),
-        )
-        steps.append(audit_pipe)
 
     pipe = TSPipeline(*steps)
 
