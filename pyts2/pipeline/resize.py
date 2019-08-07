@@ -78,7 +78,6 @@ class CropCentreStep(GenericDownsizerStep):
     def process_file(self, file):
         assert hasattr(file, "pixels")  # TODO proper check
 
-        # so
         orow, ocol, _ = file.pixels.shape
         rows, cols = self._new_imagesize(file.pixels.shape)
         left = int((orow - rows) / 2)
@@ -87,4 +86,3 @@ class CropCentreStep(GenericDownsizerStep):
         newpixels = file.pixels[left:left+rows, top:top+cols, :]
 
         return TimestreamImage.from_timestreamfile(file, pixels=newpixels)
-

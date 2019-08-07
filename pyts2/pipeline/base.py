@@ -78,7 +78,6 @@ class TSPipeline(object):
         # TODO needed so that pipelines can be used as files
         pass
 
-
     def finish(self):
         for step in self.steps:
             step.finish()
