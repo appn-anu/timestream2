@@ -8,6 +8,8 @@ from .base import (
     TSPipeline,
     CopyStep,
     TeeStep,
+    WriteFileStep,
+    ResultRecorderStep,
     FileStatsStep,
 )
 from .audit import (
