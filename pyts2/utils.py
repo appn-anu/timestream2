@@ -61,15 +61,3 @@ class CatchSignalThenExit(object):
     def __exit__(self, *args):
         if self.exit and self.caught:
             sys.exit(self.returncode)
-
-class LockedZipFile(ZipFile):
-    def __init__(self, file, mode='r', compression=ZIP_STORED, allowZip64=True, compresslevel=None):
-        super().__init__(file, mode=mode, compression=compression, allowZip64=allowZip64, compresslevel=compresslevel)
-
-    def __enter__(self):
-        pass
-        
-    def __exit__(self):
-        pass
-    #TODO: __enter__ and __exit__ that lock based on file name
-
