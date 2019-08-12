@@ -5,6 +5,7 @@ dependencies:
   - python=3.*
   - click
   - dulwich
+  - fasteners
   - flask
   - imageio
   - iso8601

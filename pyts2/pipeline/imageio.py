@@ -136,7 +136,8 @@ class EncodeImageFileStep(PipelineStep):
             content = imageio.imwrite('<bytes>', file.rgb_8, **self.options)
         # reinstatiate and demote to a TimestreamFile
         return TimestreamFile(content=content, filename=filename,
-                              instant=file.instant, report=file.report)
+                              instant=file.instant, report=file.report,
+                              format=self.format)
 
 
 class TimestreamImage(TimestreamFile):

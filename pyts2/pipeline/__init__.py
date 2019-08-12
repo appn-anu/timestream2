@@ -7,7 +7,6 @@ from .base import (
     ResultRecorder,
     TSPipeline,
     CopyStep,
-    TeeStep,
     WriteFileStep,
     ResultRecorderStep,
     FileStatsStep,

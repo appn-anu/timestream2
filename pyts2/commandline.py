@@ -131,7 +131,7 @@ def downsize(input, output, threads, informat, outformat, size, bundle, mode):
               help="Audit log output TSV. If given, input images will be audited, with the log saved here.")
 def ingest(input, informat, output, bundle, threads, downsized_output, downsized_size, downsized_bundle, audit_output):
     ints = TimeStream(input, format=informat)
-    outts = TimeStream(output, format=informat, bundle_level=bundle)
+    outts = TimeStream(output, bundle_level=bundle)
 
     steps = [WriteFileStep(outts)]
 
@@ -149,7 +149,7 @@ def ingest(input, informat, output, bundle, threads, downsized_output, downsized
 
 
     if downsized_output is not None:
-        downsized_ts = TimeStream(downsized_output, format="jpg", bundle_level=downsized_bundle)
+        downsized_ts = TimeStream(downsized_output, bundle_level=downsized_bundle)
         downsize_pipeline = TSPipeline(
             DecodeImageFileStep(),
             ResizeImageStep(geom=downsized_size),
@@ -161,7 +161,7 @@ def ingest(input, informat, output, bundle, threads, downsized_output, downsized
     pipe = TSPipeline(*steps)
 
     try:
-        for image in pipe.process(ints, ncpus=threads):
+        for image in pipe.process_cf(ints, ncpus=threads):
             pass
     finally:
         pipe.finish()

@@ -82,3 +82,18 @@ def test_imagepixels():
     assert np.array_equal(image.rgb_8, np.array([[[255,255,255], [0, 0, 0]]], dtype="u1"))
     Lab = np.array([[[100, 0, 0], [0, 0, 0]]])
     assert np.allclose(image.Lab, Lab, atol=0.01)  # the LAB above is rounded
+
+def test_pipeline(data, tmpdir):
+    output = TimeStream(tmpdir.join("test_ts"))
+    pipe = TSPipeline()
+    pipe.add_step(WriteFileStep(output))
+
+    files = {}
+    for file in pipe.process_cf(TimeStream(data("timestreams/flat"))):
+        files[str(file.instant)] = file.md5sum
+
+    newfiles = {}
+    for file in output:
+        newfiles[str(file.instant)] = file.md5sum
+
+    assert files == newfiles
