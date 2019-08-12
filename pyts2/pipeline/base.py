@@ -48,20 +48,19 @@ class TSPipeline(object):
         return file
 
     def process(self, input_stream, ncpus=1, progress=True):
+        from concurrent.futures import as_completed, ThreadPoolExecutor, ProcessPoolExecutor
         if ncpus > 1:
-            from multiprocessing import Pool
-            pool = Pool(ncpus)
-            res = pool.imap_unordered(self.process_file, input_stream)
+            executor = ProcessPoolExecutor(max_workers=ncpus)
         else:
-            res = map(self.process_file, input_stream)
-        if progress:
-            res = tqdm(res, disable=None, unit=" files")
-        for file in res:
-            if file is None:
-                continue
-            self.report.record(file.instant, **file.report)
-            self.n += 1
-            yield file
+            executor = ThreadPoolExecutor()
+        with executor:
+            for file in tqdm(executor.map(self.process_file, input_stream), unit=" files"):
+                if file is None:
+                    continue
+                self.report.record(file.instant, **file.report)
+                self.n += 1
+                yield file
+
 
     def __call__(self, *args, **kwargs):
         yield from self.process(*args, **kwargs)
@@ -77,7 +76,6 @@ class TSPipeline(object):
     def read(self, file):
         # TODO needed so that pipelines can be used as files
         pass
-
 
     def finish(self):
         for step in self.steps:
@@ -157,7 +155,7 @@ class CopyStep(PipelineStep):
     pass
 
 
-class TeeStep(PipelineStep):
+class WriteFileStep(PipelineStep):
     """Write each file to output, without changing the file"""
     def __init__(self, output):
         self.output = output
@@ -165,11 +163,6 @@ class TeeStep(PipelineStep):
     def process_file(self, file):
         self.output.write(file)
         return file
-
-
-class WriteFileStep(TeeStep):
-    """Write each file to output, without changing the file"""
-    pass
 
 
 class FileStatsStep(PipelineStep):

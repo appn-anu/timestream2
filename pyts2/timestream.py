@@ -3,8 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from pyts2.time import *
-from pyts2.utils import *
+import fasteners
 
 import datetime as dt
 import io
@@ -14,8 +13,13 @@ import re
 import tarfile
 import warnings
 import zipfile
+from queue import Queue
+from threading import Thread
 from pathlib import Path
 import hashlib
+
+from pyts2.time import *
+from pyts2.utils import *
 
 
 def path_is_timestream_file(path, extensions=None):
@@ -81,7 +85,7 @@ class FileContentFetcher(object):
 
 class TimestreamFile(object):
     '''A container class for files in timestreams'''
-    def __init__(self, instant=None, filename=None, fetcher=None, content=None, report=None):
+    def __init__(self, instant=None, filename=None, fetcher=None, content=None, report=None, format=None):
         self.instant = instant
         self.filename = filename
         self.fetcher = fetcher
@@ -98,6 +102,9 @@ class TimestreamFile(object):
             raise ValueError("TimestreamFile must have a filename")
         if self.__class__ is TimestreamFile and self._content is None and self.fetcher is None:
             raise ValueError("TimestreamFile must have content (directly or via a fetcher)")
+        if format is None:
+            format = op.splitext(self.filename)[1]
+        self.format = re.sub(r'^\.+', '', format)
 
     @property
     def content(self):
@@ -141,6 +148,14 @@ class TimestreamFile(object):
 
     def __repr__(self):
         return self.filename
+
+    @property
+    def md5sum(self):
+        return self.checksum('md5')
+
+    @property
+    def shasum(self):
+        return self.checksum('sha512')
 
 
 
@@ -250,43 +265,43 @@ class TimeStream(object):
                     yield TimestreamFile.from_path(path)
 
 
-    def _timestream_path(self, instant):
+    def _timestream_path(self, file):
         """Gets path for timestream file.
         """
         idxstr = ""
-        if instant.index is not None:
-            idxstr = "_" + str(instant.index)
+        if file.instant.index is not None:
+            idxstr = "_" + str(file.instant.index)
         path = "%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{name}_%Y_%m_%d_%H_%M_%S_{subsec:02d}{idx}.{ext}"
-        path = instant.datetime.strftime(path)
-        path = path.format(name=self.name, subsec=instant.subsecond,
-                           idx=idxstr, ext=self.format)
+        path = file.instant.datetime.strftime(path)
+        path = path.format(name=self.name, subsec=file.instant.subsecond,
+                           idx=idxstr, ext=file.format)
         return path
 
-    def _bundle_archive_path(self, instant):
+    def _bundle_archive_path(self, file):
         if self.bundle == "none":
             return None
         if self.bundle == "root":
-            return f"{self.path}.{self.format}.zip"
+            return f"{self.path}.{file.format}.zip"
         elif self.bundle == "year":
-            bpath = f"{self.path}/{self.name}_%Y.{self.format}.zip"
+            bpath = f"{self.path}/{self.name}_%Y.{file.format}.zip"
         elif self.bundle == "month":
-            bpath = f"{self.path}/%Y/{self.name}_%Y_%m.{self.format}.zip"
+            bpath = f"{self.path}/%Y/{self.name}_%Y_%m.{file.format}.zip"
         elif self.bundle == "day":
-            bpath = f"{self.path}/%Y/%Y_%m/{self.name}_%Y_%m_%d.{self.format}.zip"
+            bpath = f"{self.path}/%Y/%Y_%m/{self.name}_%Y_%m_%d.{file.format}.zip"
         elif self.bundle == "hour":
-            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/{self.name}_%Y_%m_%d_%H.{self.format}.zip"
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/{self.name}_%Y_%m_%d_%H.{file.format}.zip"
         elif self.bundle == "minute":
-            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M.{self.format}.zip"
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M.{file.format}.zip"
         elif self.bundle == "second":
-            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M_%S.{self.format}.zip"
-        return instant.datetime.strftime(bpath)
+            bpath = f"{self.path}/%Y/%Y_%m/%Y_%m_%d/%Y_%m_%d_%H/{self.name}_%Y_%m_%d_%H_%M_%S.{file.format}.zip"
+        return file.instant.datetime.strftime(bpath)
 
     def write(self, file):
-        if self.name is None or self.format is None:
+        if self.name is None:
             raise RuntimeError("TSv2Stream not opened")
         if not isinstance(file, TimestreamFile):
             raise TypeError("file should be a TimestreamFile")
-        subpath = self._timestream_path(file.instant)
+        subpath = self._timestream_path(file)
         if self.bundle == "none":
             outpath = op.join(self.path, subpath)
             os.makedirs(op.dirname(outpath), exist_ok=True)
@@ -296,18 +311,19 @@ class TimeStream(object):
         else:
             if self.bundle == "root":
                 self.path = str(self.path)
-                for ext in [".tar", ".zip", f".{self.format}"]:
+                for ext in [".tar", ".zip", f".{file.format}"]:
                     if self.path.lower().endswith(ext):
                         self.path = self.path[:-len(ext)]
                 self.path = Path(self.path)
-            bundle = self._bundle_archive_path(file.instant)
+            bundle = self._bundle_archive_path(file)
             bdir = op.dirname(bundle)
             if bdir:  # i.e. if not $PWD
                 os.makedirs(bdir, exist_ok=True)
             # TODO this logic should probably live in TSfile
-            with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
-                                 allowZip64=True) as zip:
-                zip.writestr(op.join(self.name, subpath), file.content)
+            with fasteners.InterProcessLock(bundle):
+                with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
+                                     allowZip64=True) as zip:
+                    zip.writestr(op.join(self.name, subpath), file.content)
 
     def __iter__(self):
         return self.iter()
