@@ -311,7 +311,7 @@ class TimeStream(object):
         else:
             if self.bundle == "root":
                 self.path = str(self.path)
-                for ext in [".tar", ".zip", f".{format}"]:
+                for ext in [".tar", ".zip", f".{file.format}"]:
                     if self.path.lower().endswith(ext):
                         self.path = self.path[:-len(ext)]
                 self.path = Path(self.path)
