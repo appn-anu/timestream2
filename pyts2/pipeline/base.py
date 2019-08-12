@@ -47,9 +47,13 @@ class TSPipeline(object):
                 return file
         return file
 
-    def process_cf(self, input_stream, ncpus=1, progress=True):
+    def process(self, input_stream, ncpus=1, progress=True):
         from concurrent.futures import as_completed, ThreadPoolExecutor, ProcessPoolExecutor
-        with ProcessPoolExecutor(max_workers=ncpus) as executor:
+        if ncpus > 1:
+            executor = ProcessPoolExecutor(max_workers=ncpus)
+        else:
+            executor = ThreadPoolExecutor()
+        with executor:
             for file in tqdm(executor.map(self.process_file, input_stream), unit=" files"):
                 if file is None:
                     continue
@@ -57,21 +61,6 @@ class TSPipeline(object):
                 self.n += 1
                 yield file
 
-    def process(self, input_stream, ncpus=1, progress=True):
-        if ncpus > 1:
-            from multiprocessing import Pool
-            pool = Pool(ncpus)
-            res = pool.imap_unordered(self.process_file, input_stream)
-        else:
-            res = map(self.process_file, input_stream)
-        if progress:
-            res = tqdm(res, disable=None, unit=" files")
-        for file in res:
-            if file is None:
-                continue
-            self.report.record(file.instant, **file.report)
-            self.n += 1
-            yield file
 
     def __call__(self, *args, **kwargs):
         yield from self.process(*args, **kwargs)

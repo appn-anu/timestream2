@@ -46,12 +46,12 @@ def bundle(force, informat, format, bundle, input, output):
 @tstk_main.command()
 @click.option("--output", "-o", required=True,
               help="Output TSV file name")
-@click.option("--threads", "-t", default=1,
+@click.option("--ncpus", "-j", default=1,
               help="Number of parallel workers")
 @click.option("--informat", "-F", default=None,
               help="Input image format (use extension as lower case for raw formats)")
 @click.argument("input")
-def audit(output, input, threads=1, informat=None):
+def audit(output, input, ncpus=1, informat=None):
     pipe = TSPipeline(
         FileStatsStep(),
         DecodeImageFileStep(),
@@ -61,7 +61,7 @@ def audit(output, input, threads=1, informat=None):
 
     ints = TimeStream(input, format=informat)
     try:
-        for image in pipe.process(ints, ncpus=threads):
+        for image in pipe.process(ints, ncpus=ncpus):
             if pipe.n % 1000 == 0:
                 pipe.report.save(output)
     finally:
@@ -75,7 +75,7 @@ def audit(output, input, threads=1, informat=None):
 @tstk_main.command()
 @click.option("--output", "-o", required=True,
               help="Output TimeStream")
-@click.option("--threads", "-t", default=1,
+@click.option("--ncpus", "-j", default=1,
               help="Number of parallel workers")
 @click.option("--informat", "-F", default=None,
               help="Input image format (use extension as lower case for raw formats)")
@@ -89,7 +89,7 @@ def audit(output, input, threads=1, informat=None):
 @click.option("--size", "-s", default='720x',
               help="Output size. Use ROWSxCOLS. One of ROWS or COLS can be omitted to keep aspect ratio.")
 @click.argument("input")
-def downsize(input, output, threads, informat, outformat, size, bundle, mode):
+def downsize(input, output, ncpus, informat, outformat, size, bundle, mode):
     if mode == "resize":
         downsizer = ResizeImageStep(geom=size)
     elif mode == "centrecrop" or mode == "crop":
@@ -102,7 +102,7 @@ def downsize(input, output, threads, informat, outformat, size, bundle, mode):
     ints = TimeStream(input, format=informat)
     outts = TimeStream(output, format=outformat, bundle_level=bundle)
     try:
-        pipe.process_to(ints, outts, ncpus=threads)
+        pipe.process_to(ints, outts, ncpus=ncpus)
     finally:
         click.echo(f"{mode} {input}:{informat} to {output}:{outformat}, found {pipe.n} files")
 
@@ -119,7 +119,7 @@ def downsize(input, output, threads, informat, outformat, size, bundle, mode):
               help="Archival bundled TimeStream")
 @click.option("--bundle", "-b", type=Choice(TimeStream.bundle_levels), default="none",
               help="Level at which to bundle files.")
-@click.option("--threads", "-t", default=1,
+@click.option("--ncpus", "-j", default=1,
               help="Number of parallel workers")
 @click.option("--downsized-output", "-s", default=None,
               help="Output a downsized copy of the images here")
@@ -129,7 +129,7 @@ def downsize(input, output, threads, informat, outformat, size, bundle, mode):
               help="Level at which to bundle downsized images.")
 @click.option("--audit-output", "-a", type=Path(writable=True), default=None,
               help="Audit log output TSV. If given, input images will be audited, with the log saved here.")
-def ingest(input, informat, output, bundle, threads, downsized_output, downsized_size, downsized_bundle, audit_output):
+def ingest(input, informat, output, bundle, ncpus, downsized_output, downsized_size, downsized_bundle, audit_output):
     ints = TimeStream(input, format=informat)
     outts = TimeStream(output, bundle_level=bundle)
 
@@ -161,7 +161,7 @@ def ingest(input, informat, output, bundle, threads, downsized_output, downsized
     pipe = TSPipeline(*steps)
 
     try:
-        for image in pipe.process_cf(ints, ncpus=threads):
+        for image in pipe.process(ints, ncpus=ncpus):
             pass
     finally:
         pipe.finish()

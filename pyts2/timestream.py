@@ -330,23 +330,3 @@ class TimeStream(object):
 
     def close(self):
         pass
-
-
-class TimeStreamWriter(TimeStream):
-    def _ts_queue_manager(timestream):
-        while True:
-            file = timestream.writequeue.get()
-            timestream.write(file)
-        
-            self.writequeue = None
-            self.readqueue = None
-
-    def get_thread(self):
-        self.writequeue = Queue(15)
-        self.readqueue = Queue(15)
-        t = Thread(target=_ts_queue_manager, args=(self, ))
-        t.start()
-        return t
-    def close(self):
-        if self.writequeue is not None:
-            self.writequeue.join()

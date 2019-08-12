@@ -84,16 +84,19 @@ def test_imagepixels():
     assert np.allclose(image.Lab, Lab, atol=0.01)  # the LAB above is rounded
 
 def test_pipeline(data, tmpdir):
-    output = TimeStream(tmpdir.join("test_ts"))
-    pipe = TSPipeline()
-    pipe.add_step(WriteFileStep(output))
+    def dotest(ncpus):
+        output = TimeStream(tmpdir.join("test_ts_{}".format(ncpus)))
+        pipe = TSPipeline()
+        pipe.add_step(WriteFileStep(output))
 
-    files = {}
-    for file in pipe.process_cf(TimeStream(data("timestreams/flat"))):
-        files[str(file.instant)] = file.md5sum
+        files = {}
+        for file in pipe.process(TimeStream(data("timestreams/flat")), ncpus=ncpus):
+            files[str(file.instant)] = file.md5sum
 
-    newfiles = {}
-    for file in output:
-        newfiles[str(file.instant)] = file.md5sum
+        newfiles = {}
+        for file in output:
+            newfiles[str(file.instant)] = file.md5sum
 
-    assert files == newfiles
+        assert files == newfiles
+    dotest(1)
+    dotest(3)
