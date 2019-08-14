@@ -4,6 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from pyts2 import TimeStream
+from pyts2.timestream import FileContentFetcher
 from pyts2.pipeline import *
 from pyts2.utils import CatchSignalThenExit
 import argparse as ap
@@ -168,6 +169,29 @@ def ingest(input, informat, output, bundle, ncpus, downsized_output, downsized_s
         if audit_output is not None:
             pipe.report.save(audit_output)
         click.echo(f"Ingested {input}:{informat} to {output}, found {pipe.n} files")
+
+
+@tstk_main.command()
+@click.argument("input", type=Path(readable=True, exists=True),
+        help="Ephemeral image source location")
+@click.option("--resource", "-o", required=True, type=Path(writable=True),
+        help="Archival bundled TimeStream")
+@click.option("--informat", "-F", default=None,
+        help="Input image format (use extension as lower case for raw formats)")
+def verify(input, resource, informat):
+    ephemeral_ts = TimeStream(input, format=informat)
+    resource_ts = TimeStream(resource, format=informat)
+
+    for image in tqdm(ephemeral_ts):
+        try:
+            res_img = resource_ts[ephemeral_ts.instant]
+        except KeyError:
+            continue
+        if image.md5sum == res_img.md5sum:
+            if not isinstance(image.fetcher, FileContentFetcher):
+                click.echo("WARNING: can't delete", image.filename, "as it is bundled", err=True)
+            print("rm -v", image.fetcher.path)
+            #image.delete()
 
 
 if __name__ == "__main__":
