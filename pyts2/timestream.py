@@ -247,8 +247,12 @@ class TimeStream(object):
             else: raise ValueError(f"'{path}' appears not to be an archive")
 
         def is_archive(path):
-            return op.exists(path) and op.isfile(path) and \
-                (zipfile.is_zipfile(str(path)) or tarfile.is_tarfile(path))
+            try:
+                return op.exists(path) and op.isfile(path) and \
+                    (zipfile.is_zipfile(str(path)) or tarfile.is_tarfile(path))
+            except (IOError, PermissionError, OSError, RuntimeError) as exc:
+                warnings.warn(str(exc))
+                return False
 
         if is_archive(self.path):
             yield from walk_archive(self.path)

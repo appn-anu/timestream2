@@ -178,28 +178,38 @@ def ingest(input, informat, output, bundle, ncpus, downsized_output, downsized_s
         help="Archival bundled TimeStream")
 @click.option("--informat", "-F", default=None,
         help="Input image format (use extension as lower case for raw formats)")
+@click.option("--rm-script", "-s", default=None, type=Path(writeable=True),
+        help="Write a bash script that removes files to here")
 @click.option("--yes", "-y", "force_delete", default=False, is_flag=True,
         help="Delete files without asking")
-def verify(ephemeral, resource, informat, force_delete):
+def verify(ephemeral, resource, informat, force_delete, rm_script):
     ephemeral_ts = TimeStream(ephemeral, format=informat)
     resource_ts = TimeStream(resource, format=informat)
     to_delete = []
     resource_images = resource_ts.instants
-    for image in tqdm(ephemeral_ts):
+    for image in tqdm(ephemeral_ts, unit=" files"):
         try:
             res_img = resource_images[image.instant]
         except KeyError:
             continue
-        if image.md5sum == res_img.md5sum:
-            if not isinstance(image.fetcher, FileContentFetcher):
-                click.echo("WARNING: can't delete", image.filename, "as it is bundled", err=True)
-            to_delete.append(image.fetcher.path)
-    click.echo("will delete the following files:")
-    for f in to_delete:
-        click.echo("\t{}".format(f))
-    if force_delete or click.confirm("Is that OK?"):
+        try:
+            if image.md5sum == res_img.md5sum:
+                if not isinstance(image.fetcher, FileContentFetcher):
+                    click.echo(f"WARNING: can't delete {image.filename} as it is bundled", err=True)
+                to_delete.append(image.fetcher.path)
+        except Exception as exc:
+            click.echo(f"WARNING: error in resources lookup of {image.filename}: {str(exc)}", err=True)
+    if rm_script is not None:
+        with open(rm_script, "w") as fh:
+            for f in to_delete:
+                print("rm -fv", realpath(f), file=fh)
+    else:
+        click.echo("will delete the following files:")
         for f in to_delete:
-            os.unlink(f)
+            click.echo("\t{}".format(f))
+        if force_delete or click.confirm("Is that OK?"):
+            for f in to_delete:
+                os.unlink(f)
 
 
 if __name__ == "__main__":
