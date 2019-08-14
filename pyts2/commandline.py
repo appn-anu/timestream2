@@ -4,6 +4,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from pyts2 import TimeStream
+from pyts2.timestream import FileContentFetcher
 from pyts2.pipeline import *
 from pyts2.utils import CatchSignalThenExit
 import argparse as ap
@@ -31,12 +32,12 @@ def tstk_main():
                 #help="Input files in timestream format of any form but msgpack")
 @click.argument("output")
                 #help="Output file or directory")
-def bundle(force, informat, format, bundle, input, output):
+def bundle(force, informat, bundle, input, output):
     input = TimeStream(input, format=informat)
     if os.path.exists(output) and not force:
         click.echo(f"ERROR: output exists: {output}", err=True)
         sys.exit(1)
-    output =  TimeStream(output, format=format, bundle_level=bundle)
+    output =  TimeStream(output, bundle_level=bundle)
     for image in input:
         with CatchSignalThenExit():
             output.write(image)
@@ -168,6 +169,37 @@ def ingest(input, informat, output, bundle, ncpus, downsized_output, downsized_s
         if audit_output is not None:
             pipe.report.save(audit_output)
         click.echo(f"Ingested {input}:{informat} to {output}, found {pipe.n} files")
+
+
+@tstk_main.command()
+@click.option("--ephemeral", "-e", type=Path(readable=True), required=True,
+        help="Ephemeral image source location")
+@click.option("--resource", "-r", required=True, type=Path(readable=True),
+        help="Archival bundled TimeStream")
+@click.option("--informat", "-F", default=None,
+        help="Input image format (use extension as lower case for raw formats)")
+@click.option("--yes", "-y", "force_delete", default=False, is_flag=True,
+        help="Delete files without asking")
+def verify(ephemeral, resource, informat, force_delete):
+    ephemeral_ts = TimeStream(ephemeral, format=informat)
+    resource_ts = TimeStream(resource, format=informat)
+    to_delete = []
+    resource_images = resource_ts.instants
+    for image in tqdm(ephemeral_ts):
+        try:
+            res_img = resource_images[image.instant]
+        except KeyError:
+            continue
+        if image.md5sum == res_img.md5sum:
+            if not isinstance(image.fetcher, FileContentFetcher):
+                click.echo("WARNING: can't delete", image.filename, "as it is bundled", err=True)
+            to_delete.append(image.fetcher.path)
+    click.echo("will delete the following files:")
+    for f in to_delete:
+        click.echo("\t{}".format(f))
+    if force_delete or click.confirm("Is that OK?"):
+        for f in to_delete:
+            os.unlink(f)
 
 
 if __name__ == "__main__":
