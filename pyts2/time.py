@@ -110,6 +110,8 @@ class TSInstant(object):
             return (self.datetime, self.subsecond) >= \
                 (other.datetime, other.subsecond)
 
+    def __hash__(self):
+        return hash(str(self))
 
     def __repr__(self):
         return str(self)

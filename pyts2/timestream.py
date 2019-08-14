@@ -166,6 +166,7 @@ class TimeStream(object):
                  bundle_level="none", name=None, timefilter=None):
         """path is the base directory of a timestream"""
         self._files = {}
+        self._instants = None
         self.name = name
         self.path = None
         self.format = None
@@ -196,7 +197,9 @@ class TimeStream(object):
 
     @property
     def instants(self):
-        return list(sorted(f.instant for f in self.iter(tar_contents=False)))
+        if self._instants is None:
+            self._instants = {f.instant: f for f in self.iter(tar_contents=False)}
+        return self._instants
 
     def __getitem__(self, filename):
         if len(self._files) == 0:
