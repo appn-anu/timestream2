@@ -183,7 +183,6 @@ def ingest(input, informat, output, bundle, ncpus, downsized_output, downsized_s
 def verify(ephemeral, resource, informat, force_delete):
     ephemeral_ts = TimeStream(ephemeral, format=informat)
     resource_ts = TimeStream(resource, format=informat)
-
     to_delete = []
     resource_images = resource_ts.instants
     for image in tqdm(ephemeral_ts):
