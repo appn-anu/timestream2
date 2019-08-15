@@ -112,6 +112,10 @@ class TimestreamFile(object):
             self._content = self.fetcher.get()
         return self._content
 
+    def clear_content(self):
+        del self._content
+        self._content = None
+
     # TODO: work out where this should go. be careful, as setting here should sync to
     # disc perhaps?
     #@content.setter
@@ -312,9 +316,9 @@ class TimeStream(object):
         if self.bundle == "none":
             outpath = op.join(self.path, subpath)
             os.makedirs(op.dirname(outpath), exist_ok=True)
-            # TODO this logic should probably live in TSfile
-            with open(outpath, 'wb') as fh:
-                fh.write(file.content)
+            with LockFile(outpath + ".lock"):
+                with open(outpath, 'wb') as fh:
+                    fh.write(file.content)
         else:
             if self.bundle == "root":
                 self.path = str(self.path)
@@ -326,8 +330,7 @@ class TimeStream(object):
             bdir = op.dirname(bundle)
             if bdir:  # i.e. if not $PWD
                 os.makedirs(bdir, exist_ok=True)
-            # TODO this logic should probably live in TSfile
-            with fasteners.InterProcessLock(bundle):
+            with LockFile(bundle + ".lock"):
                 with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
                                      allowZip64=True) as zip:
                     zip.writestr(op.join(self.name, subpath), file.content)

@@ -8,7 +8,9 @@ from signal import *
 import sys
 import warnings
 import os
+import os.path as op
 from zipfile import ZipFile, ZIP_STORED
+import fasteners
 
 
 def nowarnings(func):
@@ -61,3 +63,24 @@ class CatchSignalThenExit(object):
     def __exit__(self, *args):
         if self.exit and self.caught:
             sys.exit(self.returncode)
+
+class LockFile(object):
+    def __init__(self, lockpath, attempts=100000):
+        self.path = lockpath
+        self.attempts = attempts
+        self.lock = fasteners.InterProcessLock(self.path)
+
+    def __enter__(self, *args):
+        while op.exists(self.path) \
+                and not self.lock.acquire(timeout=0.01) \
+                and (self.attempts is None or self.attempts > 0):
+            time.sleep(0.01)
+        if op.exists(self.path) or not self.lock.acquire(timeout=0.1):
+            raise RuntimeError(f"Can't lock {self.path}")
+        with open(self.path, "a") as f:
+            pass
+
+    def __exit__(self, *args):
+        self.lock.release()
+        if op.exists(self.path):
+            os.unlink(self.path)
