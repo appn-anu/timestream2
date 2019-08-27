@@ -71,14 +71,18 @@ class LockFile(object):
         self.lock = fasteners.InterProcessLock(self.path)
 
     def __enter__(self, *args):
-        while op.exists(self.path) \
-                and not self.lock.acquire(timeout=0.01) \
-                and (self.attempts is None or self.attempts > 0):
-            time.sleep(0.01)
-        if op.exists(self.path) or not self.lock.acquire(timeout=0.1):
-            raise RuntimeError(f"Can't lock {self.path}")
-        with open(self.path, "a") as f:
-            pass
+        workdir = op.dirname(self.path)
+        if not op.exists(workdir):
+            os.makedirs(workdir, exist_ok=True)
+        self.lock.acquire()
+        #while op.exists(self.path) \
+        #        and not self.lock.acquire(timeout=0.01) \
+        #        and (self.attempts is None or self.attempts > 0):
+        #    time.sleep(0.01)
+        #if op.exists(self.path) or not self.lock.acquire(timeout=0.1):
+        #    raise RuntimeError(f"Can't lock {self.path}")
+        #with open(self.path, "a") as f:
+        #    pass
 
     def __exit__(self, *args):
         self.lock.release()

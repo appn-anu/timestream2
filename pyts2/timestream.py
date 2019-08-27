@@ -20,6 +20,7 @@ import hashlib
 
 from pyts2.time import *
 from pyts2.utils import *
+from pyts2.filelock import FileLock
 
 
 def path_is_timestream_file(path, extensions=None):
@@ -316,7 +317,7 @@ class TimeStream(object):
         if self.bundle == "none":
             outpath = op.join(self.path, subpath)
             os.makedirs(op.dirname(outpath), exist_ok=True)
-            with LockFile(outpath + ".lock"):
+            with FileLock(outpath):
                 with open(outpath, 'wb') as fh:
                     fh.write(file.content)
         else:
@@ -330,7 +331,7 @@ class TimeStream(object):
             bdir = op.dirname(bundle)
             if bdir:  # i.e. if not $PWD
                 os.makedirs(bdir, exist_ok=True)
-            with LockFile(bundle + ".lock"):
+            with FileLock(bundle):
                 with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
                                      allowZip64=True) as zip:
                     zip.writestr(op.join(self.name, subpath), file.content)
