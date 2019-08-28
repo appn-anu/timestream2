@@ -161,7 +161,6 @@ class TimestreamFile(object):
         return self.checksum('sha512')
 
 
-
 class TimeStream(object):
     bundle_levels = ("root", "year", "month", "day", "hour", "none")
 
@@ -332,7 +331,13 @@ class TimeStream(object):
             with FileLock(bundle):
                 with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
                                      allowZip64=True) as zip:
-                    zip.writestr(op.join(self.name, subpath), file.content)
+                    if subpath not in zip.namelist():
+                        zip.writestr(op.join(self.name, subpath), file.content)
+                    else:
+                        file_crc = zlib.crc32(file.content)
+                        zip_crc = zip.getinfo(subpath).CRC
+                        if file_crc != zip_crc:
+                            raise RuntimeError(f"ERROR: trying to overwrite file with different content: zip={bundle}, subpath={subpath}")
 
     def __iter__(self):
         return self.iter()
