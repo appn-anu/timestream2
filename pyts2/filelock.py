@@ -27,6 +27,7 @@
 import os
 import time
 import errno
+import random
 
 class FileLockException(Exception):
     pass
@@ -52,16 +53,17 @@ class FileLock(object):
 
     def acquire(self):
         """ Acquire the lock, if possible. If the lock is in use, it check again
-            every `wait` seconds. It does this until it either gets the lock or
+            every `delay` seconds. It does this until it either gets the lock or
             exceeds `timeout` number of seconds, in which case it throws
             an exception.
         """
+        time.sleep(random.randrange(1, 10) / 1000)  # 1-10 millisec delay
         start_time = time.time()
         while True:
             try:
                 self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
                 self.is_locked = True #moved to ensure tag only when locked
-                break;
+                break
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise

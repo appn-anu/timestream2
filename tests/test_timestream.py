@@ -30,7 +30,7 @@ def test_read(data):
             if stream.sorted:
                 assert file.instant == expect_insts[i]
 
-        assert stream.instants == expect_insts
+        assert list(sorted(stream.instants.keys())) == expect_insts
 
 
 def test_gvlike(data):
@@ -149,4 +149,17 @@ def test_read_with_filter(data):
                 assert file.instant == expect_insts[i]
             else:
                 assert file.instant in expect_insts
-        assert stream.instants == expect_insts
+        assert list(sorted(stream.instants.keys())) == expect_insts
+
+def test_zip_overwrite(data, tmpdir):
+    in_stream = TimeStream(data("timestreams/nested"))
+    out_stream = TimeStream(path=tmpdir.join("test_ts.zip"), bundle_level='root', name="output")
+    
+    file = next(in_stream.iter())
+
+    out_stream.write(file)
+    out_stream.write(file)
+    file.clear_content()
+    file._content = b"this isn't the correct content"
+    with pytest.raises(RuntimeError):
+        out_stream.write(file)
