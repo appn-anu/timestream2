@@ -15,6 +15,7 @@ from queue import Queue
 from threading import Thread
 from pathlib import Path
 import hashlib
+import zlib
 
 from pyts2.time import *
 from pyts2.utils import *
@@ -331,11 +332,12 @@ class TimeStream(object):
             with FileLock(bundle):
                 with zipfile.ZipFile(bundle, mode="a", compression=zipfile.ZIP_STORED,
                                      allowZip64=True) as zip:
-                    if subpath not in zip.namelist():
-                        zip.writestr(op.join(self.name, subpath), file.content)
+                    pathinzip = op.join(self.name, subpath)
+                    if pathinzip not in zip.namelist():
+                        zip.writestr(pathinzip, file.content)
                     else:
                         file_crc = zlib.crc32(file.content)
-                        zip_crc = zip.getinfo(subpath).CRC
+                        zip_crc = zip.getinfo(pathinzip).CRC
                         if file_crc != zip_crc:
                             raise RuntimeError(f"ERROR: trying to overwrite file with different content: zip={bundle}, subpath={subpath}")
 
