@@ -268,6 +268,11 @@ class TimeStream(object):
                 path = op.join(root, file)
                 if self.timefilter is not None and not self.timefilter.partial_within(file):
                     continue
+                if file.startswith("."):
+                    continue
+                if not (op.isfile(path) and os.access(path, os.R_OK)):
+                    warnings.warn(f"Could not read {path}, skipping")
+                    continue
                 if is_archive(path):
                     yield from walk_archive(path)
                 if path_is_timestream_file(path, extensions=self.format):
