@@ -156,7 +156,7 @@ def test_zip_overwrite(data, tmpdir):
     out_stream = TimeStream(path=tmpdir.join("test_ts.zip"), bundle_level='root', name="output")
     
     file = next(in_stream.iter())
-
+    assert len(file.content) > 0
     out_stream.write(file)
     out_stream.write(file)
     file.clear_content()
