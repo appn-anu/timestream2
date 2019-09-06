@@ -250,15 +250,14 @@ class TimeStream(object):
             else: raise ValueError(f"'{path}' appears not to be an archive")
 
         def is_archive(path):
-            try:
-                return op.exists(path) and op.isfile(path) and \
-                    (zipfile.is_zipfile(str(path)) or tarfile.is_tarfile(path))
-            except (IOError, PermissionError, OSError, RuntimeError) as exc:
-                warnings.warn(str(exc))
-                return False
+            return op.exists(path) and op.isfile(path) and \
+                (zipfile.is_zipfile(str(path)) or tarfile.is_tarfile(path))
 
-        if is_archive(self.path):
-            yield from walk_archive(self.path)
+        try:
+            if is_archive(self.path):
+                yield from walk_archive(self.path)
+        except Exception as exc:
+            warnings.warn(f"{exc.__class__.__name__}: {str(exc)} at '{self.path}'")
 
         for root, dirs, files in os.walk(self.path):
             # ensure sorted iteration
@@ -270,14 +269,16 @@ class TimeStream(object):
                     continue
                 if file.startswith("."):
                     continue
-                if not (op.isfile(path) and os.access(path, os.R_OK)):
-                    warnings.warn(f"Could not read {path}, skipping")
-                    continue
-                if is_archive(path):
-                    yield from walk_archive(path)
-                if path_is_timestream_file(path, extensions=self.format):
-                    self._files[op.basename(path)] = FileContentFetcher(path)
-                    yield TimestreamFile.from_path(path)
+                try:
+                    if not (op.isfile(path) and os.access(path, os.R_OK)):
+                        raise RuntimeError(f"Could not read {path}, skipping")
+                    if is_archive(path):
+                        yield from walk_archive(path)
+                    if path_is_timestream_file(path, extensions=self.format):
+                        self._files[op.basename(path)] = FileContentFetcher(path)
+                        yield TimestreamFile.from_path(path)
+                except Exception as exc:
+                    warnings.warn(f"{exc.__class__.__name__}: {str(exc)} at '{path}'")
 
 
     def _timestream_path(self, file):
