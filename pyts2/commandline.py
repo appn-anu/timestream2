@@ -3,18 +3,41 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import click
+from click import Choice, Path, DateTime
+from tqdm import tqdm
+
 from pyts2 import TimeStream
 from pyts2.timestream import FileContentFetcher
+from pyts2.time import TimeFilter
 from pyts2.pipeline import *
 from pyts2.utils import CatchSignalThenExit
+
 import argparse as ap
 import os
 from os.path import realpath
 import sys
+import datetime
 
-import click
-from click import Choice, Path, DateTime
-from tqdm import tqdm
+
+def valid_date(s):
+    try:
+        if isinstance(s, datetime.datetime) or isinstance(s, datetime.date):
+            return s
+        return datetime.datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        msg = "Not a valid date in Y-m-d form: '{0}'.".format(s)
+        raise argparse.ArgumentTypeError(msg)
+
+
+def valid_time(s):
+    try:
+        if isinstance(s, datetime.datetime) or isinstance(s, datetime.time):
+            return s
+        return datetime.time.strptime(s, "%H:%M:%S")
+    except ValueError:
+        msg = "Not a valid date in Y-m-d form: '{0}'.".format(s)
+        raise argparse.ArgumentTypeError(msg)
 
 
 @click.group()
@@ -213,6 +236,34 @@ def verify(ephemeral, resource, informat, force_delete, rm_script):
             if force_delete or click.confirm("Is that OK?"):
                 for f in to_delete:
                     os.unlink(f)
+
+
+@tstk_main.command()
+@click.option("--informat", "-F", default=None,
+              help="Input image format (use extension as lower case for raw formats)")
+@click.option("--bundle", "-b", type=Choice(TimeStream.bundle_levels), default="none",
+              help="Level at which to bundle files")
+@click.option("--start-time", "-S", type=valid_time,
+              help="Start time of day (inclusive)")
+@click.option("--end-time", "-E", type=valid_time,
+              help="End time of day (inclusive)")
+@click.option("--interval", "-i", type=int,
+              help="Interval in minutes")
+@click.option("--start-date", "-s", type=valid_date,
+              help="Start time of day (inclusive)")
+@click.option("--end-date", "-e", type=valid_date,
+              help="End time of day (inclusive)")
+@click.argument("input")
+@click.argument("output")
+def cp(force, informat, bundle, input, output, start_time, start_date, end_time, end_date, interval):
+    tfilter = TimeFilter(start_date, end_date, start_time, end_time)
+    if interval is not None:
+        raise NotImplementedError("haven't done interval restriction yet")
+    output =  TimeStream(output, bundle_level=bundle)
+    for image in TimeStream(input, format=informat, timefilter=tfilter):
+        with CatchSignalThenExit():
+            output.write(image)
+        click.echo(f"Processing {image}")
 
 
 if __name__ == "__main__":
